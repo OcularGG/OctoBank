@@ -150,4 +150,4 @@ client.on('messageCreate', async (message) => {
 client.once('ready', () => {
     console.log('Bot is ready!');
 });
-client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.G241EN.ANQwAXmGXX4WT8OMQKtzyKXdVY3lWdXovh_bPE');
+client.login('YOUR_DISCORD_BOT_TOKEN');
