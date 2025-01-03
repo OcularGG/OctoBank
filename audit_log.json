@@ -45,13 +45,6 @@
     "action": "pay",
     "from": "sedoctor",
     "to": "OctoBank",
-    "amount": 500,
-    "timestamp": "MTMyNDQzMDIzMTEyOTQyODA4OA.G241EN.ANQwAXmGXX4WT8OMQKtzyKXdVY3lWdXovh_bPE"
-  },
-  {
-    "action": "pay",
-    "from": "sedoctor",
-    "to": "OctoBank",
     "amount": 100,
     "timestamp": "2025-01-02T18:54:52.821Z"
   },
@@ -334,5 +327,271 @@
     "to": "sedoctor",
     "amount": 10000,
     "timestamp": "2025-01-02T22:20:47.177Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": 1000,
+    "timestamp": "2025-01-03T16:39:06.386Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "Atlas",
+    "amount": 100,
+    "timestamp": "2025-01-03T16:53:55.008Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": 100,
+    "timestamp": "2025-01-03T16:53:55.009Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": 100,
+    "timestamp": "2025-01-03T16:53:55.009Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": 100,
+    "timestamp": "2025-01-03T16:53:55.009Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 10,
+    "timestamp": "2025-01-03T17:06:57.894Z"
+  },
+  {
+    "action": "withdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -10,
+    "timestamp": "2025-01-03T17:07:06.375Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "Octobot",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:07:37.524Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:07:37.524Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:07:37.524Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:07:37.524Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "Octobot",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:07:58.144Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:07:58.144Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:07:58.144Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:07:58.144Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:12:18.235Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "Octobot",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:12:18.236Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:12:35.461Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "Octobot",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:12:35.461Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:15:19.269Z"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:15:19.272Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:15:32.484Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:15:32.484Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": 100,
+    "timestamp": "2025-01-03T17:16:23.406Z"
+  },
+  {
+    "action": "withdraw",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": -100,
+    "timestamp": "2025-01-03T17:16:41.808Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "_fireking",
+    "amount": 10,
+    "timestamp": "2025-01-03T19:11:46.353Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:21:00.691Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:28:29.832Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:37:02.327Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:43:18.739Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 100,
+    "timestamp": "2025-01-03T19:49:47.807Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 10,
+    "timestamp": "2025-01-03T19:50:02.742Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:51:41.025Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:54:24.318Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 1,
+    "timestamp": "2025-01-03T19:58:14.461Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 100,
+    "timestamp": "2025-01-03T19:58:37.923Z"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "thelitefootgg",
+    "amount": 100,
+    "timestamp": "2025-01-03T19:58:37.923Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "sedoctor",
+    "amount": 1,
+    "timestamp": "2025-01-03T20:03:25.411Z"
   }
 ]

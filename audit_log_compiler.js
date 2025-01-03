@@ -3,11 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const readline = require('readline');
-const CREDENTIALS_PATH = path.join(__dirname, 'client_secret.json');
-const TOKEN_PATH = path.join(__dirname, 'token.json');
+
+// Update the path to use 'client_secret_audit.json' instead of 'client_secret.json'
+const CREDENTIALS_PATH = path.join(__dirname, 'client_secret_audit.json');
+const TOKEN_PATH = path.join(__dirname, 'audit_token.json');  // Changed to 'audit_token.json'
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const coinsDataPath = path.join(__dirname, 'coins.json');
-let coinsData = loadData(coinsDataPath);
+const auditLogPath = path.join(__dirname, 'audit_log.json');
+let auditLogData = loadAuditLog(auditLogPath);
 const app = express();
 const port = 3000;
 
@@ -17,7 +19,7 @@ fs.readFile(CREDENTIALS_PATH, (err, content) => {
   authorize(JSON.parse(content), startUpdatingSheet);
 });
 
-function loadData(filePath) {
+function loadAuditLog(filePath) {
   if (fs.existsSync(filePath)) {
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -25,7 +27,20 @@ function loadData(filePath) {
       console.error(`Error reading ${filePath}:`, error);
     }
   }
-  return {};
+  return [];
+}
+
+function organizeAuditLogData(data) {
+  // Organize the data to present it in a user-friendly format
+  return data.map(entry => {
+    return {
+      Action: entry.action,
+      From: entry.from,
+      To: entry.to,
+      Amount: entry.amount,
+      Timestamp: new Date(entry.timestamp).toLocaleString(),
+    };
+  });
 }
 
 function authorize(credentials, callback) {
@@ -35,6 +50,7 @@ function authorize(credentials, callback) {
   // Read the token from the file
   fs.readFile(TOKEN_PATH, (err, token) => {
     if (err) return getNewToken(oAuth2Client, callback);  // If no token, get a new one
+    console.log('Token loaded:', token); // Debugging log
     oAuth2Client.setCredentials(JSON.parse(token));  // Set the credentials if token exists
     callback(oAuth2Client);  // Proceed to update the sheet
   });
@@ -73,13 +89,22 @@ function getNewToken(oAuth2Client, callback) {
 
 function updateSheet(auth) {
   const sheets = google.sheets({ version: 'v4', auth });
-  const spreadsheetId = '1H4hxWAJFubIzVsPEHPpgv1Wf8yQL1YVrfiBL3BuGCVw';
-  const range = 'Sheet1!A2:B';
-  const values = Object.entries(coinsData).map(([name, coins]) => [name, coins]);
+  const spreadsheetId = '17WWGXBa1rzX8gKzyBC1iT00w2xEJdxsJLRpPAELnNi0';  // Use your spreadsheet ID here
+  const range = 'Sheet1!A2:E';  // Adjust the range as needed
+  const organizedData = organizeAuditLogData(auditLogData);
+  const values = organizedData.map(entry => [
+    entry.Action,
+    entry.From,
+    entry.To,
+    entry.Amount,
+    entry.Timestamp
+  ]);
+
   const resource = {
     values: values,
   };
 
+  // Clear the range before updating
   sheets.spreadsheets.values.clear({
     spreadsheetId,
     range: range,
@@ -88,6 +113,9 @@ function updateSheet(auth) {
       console.log('The API returned an error when clearing the sheet:', err);
       return;
     }
+    console.log('Sheet cleared successfully:', res.status);
+
+    // Update the sheet with new data
     sheets.spreadsheets.values.update(
       {
         spreadsheetId,
@@ -99,7 +127,7 @@ function updateSheet(auth) {
         if (err) {
           console.log('The API returned an error when updating the sheet:', err);
         } else {
-          console.log('Spreadsheet updated successfully!');
+          console.log('Spreadsheet updated successfully!', res.status);
         }
       }
     );
@@ -108,40 +136,11 @@ function updateSheet(auth) {
 
 function startUpdatingSheet(auth) {
   setInterval(() => {
-    coinsData = loadData(coinsDataPath);
+    auditLogData = loadAuditLog(auditLogPath);
+    console.log('Loaded audit log data:', auditLogData); // Debugging log
     updateSheet(auth);
-  }, 10000);  // Every 10 seconds
+  }, 10000);  // Changed to 10000 milliseconds (10 seconds)
 }
-
-// Refresh the token when it expires
-function refreshTokenIfNeeded(oAuth2Client) {
-  const token = oAuth2Client.credentials;
-
-  if (token && token.expiry_date <= Date.now()) {
-    console.log("Token has expired, refreshing...");
-    oAuth2Client.refreshAccessToken((err, tokens) => {
-      if (err) {
-        console.log("Error refreshing token", err);
-        return;
-      }
-      oAuth2Client.setCredentials(tokens);
-      fs.writeFile(TOKEN_PATH, JSON.stringify(tokens), (err) => {
-        if (err) return console.log("Error saving new token", err);
-        console.log("Refreshed token saved.");
-      });
-    });
-  }
-}
-
-// Periodically check if the token needs refreshing
-setInterval(() => {
-  const token = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
-  if (token.expiry_date <= Date.now()) {
-    const oAuth2Client = new google.auth.OAuth2();
-    oAuth2Client.setCredentials(token);
-    refreshTokenIfNeeded(oAuth2Client);
-  }
-}, 60000);  // Check every minute
 
 // Local server to handle OAuth
 app.listen(port, () => {

@@ -1,10 +1,14 @@
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, SlashCommandBuilder, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = './coins.json';
 const auditLogPath = './audit_log.json';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+
+require('./SheetsCode.js');
+
 let coinsData = loadData(path, {});
 let auditLog = loadData(auditLogPath, []);
+
 function loadData(filePath, defaultData) {
     if (fs.existsSync(filePath)) {
         try {
@@ -17,137 +21,242 @@ function loadData(filePath, defaultData) {
     }
     return defaultData;
 }
+
 function saveData() {
     fs.writeFileSync(path, JSON.stringify(coinsData, null, 2));
     fs.writeFileSync(auditLogPath, JSON.stringify(auditLog, null, 2));
 }
-function isTeller(message) {
-    return message.member.roles.cache.some(role => role.name === 'Teller');
+
+function isTeller(interaction) {
+    return interaction.member.roles.cache.some(role => role.name === 'Teller');
 }
+
 function createEmbed(title, description, color = '#ffbf00') {
     return new EmbedBuilder()
         .setColor(color)
         .setDescription(description)
         .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
 }
-function sendErrorMessage(message, error) {
+
+function sendErrorMessage(interaction, error) {
     const embed = createEmbed('Error', error);
-    message.channel.send({ embeds: [embed] });
+    interaction.reply({ embeds: [embed], ephemeral: true });
 }
-function handleTransaction(message, targetUser, amount, action) {
+
+function handleTransaction(interaction, targetUser, amount, action) {
     const username = targetUser.username;
     coinsData[username] = coinsData[username] || 0;
     coinsData[username] += amount;
     auditLog.push({
         action,
-        from: message.author.username,
+        from: interaction.user.username,
         to: targetUser.username,
         amount,
-        timestamp: new Date().toISOString()
+        timestamp: formatTimestamp(new Date())  // Formatted timestamp
     });
     saveData();
+
+    // After the transaction, update the bot's status with the new total OctoGold
+    updateBotStatus();
 }
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    const args = message.content.trim().split(/\s+/);
-    const command = args[0].toLowerCase();
-    if (command === '/balance') {
-        const targetUser = message.mentions.users.first() || message.author;
+
+function formatTimestamp(date) {
+    // Format the timestamp as "2025-01-02 19:42"
+    const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+    return date.toLocaleString('en-GB', options).replace(',', ''); // Change locale if needed
+}
+
+async function updateBotStatus() {
+    let totalOctogold = Object.values(coinsData).reduce((sum, balance) => sum + balance, 0);
+    console.log('Total Octogold calculated:', totalOctogold);  // Debug log for total OctoGold
+    try {
+        // Set the bot's presence after ensuring it's initialized using ActivityType enum
+        await client.user.setPresence({
+            status: 'online', // or 'dnd', 'idle', etc. based on your preference
+            activities: [{
+                name: ` ${totalOctogold} OctoGold`,
+                type: ActivityType.Watching // Using ActivityType enum for 'WATCHING'
+            }]
+        });
+        console.log('Bot status updated successfully.');
+    } catch (error) {
+        console.error('Error setting bot presence:', error);
+    }
+}
+
+client.once('ready', async () => {
+    console.log('Bot is ready!');
+
+    // Set up the commands as usual
+    const commands = [
+        new SlashCommandBuilder().setName('balance').setDescription('Check your current Octogold balance').addUserOption(option => option.setName('user').setDescription('User to check balance of')),
+        new SlashCommandBuilder().setName('pay').setDescription('Pay or withdraw Octogold to a user').addUserOption(option => option.setName('user').setDescription('User to pay').setRequired(true)).addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true)),
+        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw Octogold to multiple users')
+            .addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true))
+            .addStringOption(option => option.setName('users').setDescription('Users to pay, mention multiple users with @').setRequired(true)),
+        new SlashCommandBuilder().setName('audit').setDescription('View the transaction audit log'),
+        new SlashCommandBuilder().setName('help').setDescription('Show help message')
+    ];
+
+    const guildId = '1097537634756214957';
+
+    try {
+        const guild = client.guilds.cache.get(guildId);
+        if (guild) {
+            await guild.commands.set([]); // Clear previous commands
+            console.log("Guild commands cleared for guild");
+
+            await guild.commands.set(commands);
+            console.log("Guild commands registered for guild");
+        } else {
+            console.log("Guild not found!");
+        }
+
+        await client.application.commands.set([]); // Clear global commands
+        console.log("Global commands cleared");
+
+    } catch (error) {
+        console.error("Error registering commands:", error);
+    }
+
+    // Set the bot's initial status after initialization
+    await updateBotStatus();
+});
+
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isCommand()) return;
+
+    const { commandName } = interaction;
+    const args = interaction.options;
+
+    if (commandName === 'balance') {
+        const targetUser = args.getUser('user') || interaction.user;
         const balance = coinsData[targetUser.username] || 0;
+
         const embed = new EmbedBuilder()
             .setColor('#ffbf00')
-            .setDescription(`[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has ${balance} coins.`)
+            .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> ${balance} OctoGold.`)
             .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
-        message.channel.send({ embeds: [embed] });
+        interaction.reply({ embeds: [embed] });
     }
-    if (command === '/pay') {
-        if (!isTeller(message)) {
-            sendErrorMessage(message, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+
+    if (commandName === 'pay') {
+        if (!isTeller(interaction)) {
+            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-        const targetUser = message.mentions.users.first();
-        const amount = parseInt(args[2]);
+
+        const targetUser = args.getUser('user');
+        const amount = args.getInteger('amount');
         if (!targetUser || isNaN(amount)) {
-            sendErrorMessage(message, 'Invalid command usage! Example: `/pay @user 100`');
+            sendErrorMessage(interaction, 'Invalid command usage! Example: `/pay @user 100`');
             return;
         }
+
         const actionType = amount < 0 ? 'withdraw' : 'deposit';
         const actionLink = actionType === 'withdraw' ? '[**OctoBank Withdrawal**](https://octobank.ocular-gaming.net/)' : '[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)';
-        handleTransaction(message, targetUser, amount, actionType);
-        const actionMessage = actionType === 'withdraw' 
-            ? `**${message.author.username}** has withdrawn **${Math.abs(amount)}** Octogold from **${targetUser.username}**'s wallet.` 
-            : `**${message.author.username}** has deposited **${Math.abs(amount)}** Octogold to **${targetUser.username}**'s wallet.`;
+        handleTransaction(interaction, targetUser, amount, actionType);
+        const actionMessage = actionType === 'withdraw'
+            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold from **${targetUser.username}**'s wallet.`
+            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold to **${targetUser.username}**'s wallet.`;
+
+        // Get the formatted timestamp
+        const timestamp = formatTimestamp(new Date()); // Use formatted timestamp
+
         const embed = new EmbedBuilder()
             .setColor('#ffbf00')
-            .setDescription(`${actionLink}\n\n${actionMessage}`)
+            .setDescription(`${actionLink}\n\n${actionMessage}\n\n${timestamp}`)
             .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
-        message.channel.send({ embeds: [embed] });
+        interaction.reply({ embeds: [embed] });
         saveData();
     }
-    if (command === '/masspay') {
-        if (!isTeller(message)) {
-            sendErrorMessage(message, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+
+    if (commandName === 'masspay') {
+        if (!isTeller(interaction)) {
+            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-        const amount = parseInt(args[1]);
-        const mentionedUsers = [...message.mentions.users.values()];
-        if (isNaN(amount) || amount === 0 || mentionedUsers.length === 0) {
-            sendErrorMessage(message, 'Invalid command usage! Example: `/masspay 100 @user1 @user2 @user3`');
+
+        const amount = args.getInteger('amount');
+        const userInput = args.getString('users');
+        if (isNaN(amount) || amount === 0 || !userInput) {
+            sendErrorMessage(interaction, 'Invalid command usage! Example: `/masspay 100 @user1 @user2 @user3`');
             return;
         }
+
+        const mentionRegex = /<@!?(\d+)>/g;
+        const mentionedUserIds = [];
+        let match;
+        while ((match = mentionRegex.exec(userInput)) !== null) {
+            mentionedUserIds.push(match[1]);
+        }
+
+        if (mentionedUserIds.length === 0) {
+            sendErrorMessage(interaction, 'No valid user mentions found! Example: `/masspay 100 @user1 @user2 @user3`');
+            return;
+        }
+
         let actionMessage;
         let actionType = amount < 0 ? 'withdraw' : 'deposit';
         let usersList = [];
-        mentionedUsers.forEach(targetUser => {
-            const username = targetUser.username;
-            coinsData[username] = coinsData[username] || 0;
-            coinsData[username] += amount;
-            usersList.push(`**${targetUser.username}**`);
-            auditLog.push({
-                action: actionType === 'withdraw' ? 'masswithdraw' : 'masspay',
-                from: message.author.username,
-                to: targetUser.username,
-                amount,
-                timestamp: new Date().toISOString()
-            });
-        });
-        actionMessage = `**${message.author.username}** has ${actionType === 'withdraw' ? 'withdrawn' : 'deposited'} **${Math.abs(amount)}** to the following members' wallets....:\n${usersList.join('\n')}`;
-        const actionText = actionType === 'withdraw' 
-            ? '[**Octobank Mass Withdrawal**](https://octobank.ocular-gaming.net/)' 
+        for (const userId of mentionedUserIds) {
+            const targetUser = await interaction.guild.members.fetch(userId);
+            if (targetUser) {
+                const username = targetUser.user.username;
+                coinsData[username] = coinsData[username] || 0;
+                coinsData[username] += amount;
+                usersList.push(`**${targetUser.user.username}**`);
+                auditLog.push({
+                    action: actionType === 'withdraw' ? 'masswithdraw' : 'masspay',
+                    from: interaction.user.username,
+                    to: targetUser.user.username,
+                    amount,
+                    timestamp: formatTimestamp(new Date()) // Formatted timestamp
+                });
+            }
+        }
+
+        actionMessage = actionType === 'withdraw'
+            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold from the following users' wallets:\n${usersList.join('\n')}`
+            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold into the following users' wallets:\n${usersList.join('\n')}`;
+
+        const actionText = actionType === 'withdraw'
+            ? '[**Octobank Mass Withdrawal**](https://octobank.ocular-gaming.net/)'
             : '[**Octobank Mass Deposit**](https://octobank.ocular-gaming.net/)';
-        const embed = createEmbed('Mass Transaction Successful', `${actionText}\n\n${actionMessage}`);
-        message.channel.send({ embeds: [embed] });
+
+        // Get the formatted timestamp
+        const timestamp = formatTimestamp(new Date()); // Use formatted timestamp
+
+        const embed = createEmbed('Mass Transaction Successful', `${actionText}\n\n${actionMessage}\n\n${timestamp}`);
+        interaction.reply({ embeds: [embed] });
         saveData();
     }
-    if (command === '/audit') {
-        if (!isTeller(message)) {
-            sendErrorMessage(message, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+
+    if (commandName === 'audit') {
+        if (!isTeller(interaction)) {
+            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-        const auditMessages = auditLog.length ? auditLog.map((log, index) => `${index + 1}. **${log.from}** ${log.action} ${log.amount} coins to **${log.to}** on ${log.timestamp}`).join('\n') : 'No transactions have been recorded.';
-        const embed = createEmbed('Audit Log', auditMessages);
-        message.channel.send({ embeds: [embed] });
+
+        await interaction.deferReply();
+
+        const chunkSize = 15;
+        const auditMessagesChunks = [];
+        while (auditLog.length > 0) {
+            const chunk = auditLog.splice(0, chunkSize);
+            const messages = chunk.map((log) => `**Action:** ${log.action}\n**From:** ${log.from}\n**To:** ${log.to}\n**Amount:** ${log.amount}\n**Timestamp:** ${log.timestamp}\n`);
+            auditMessagesChunks.push(messages.join('\n') || 'No actions recorded yet.');
+        }
+        for (const chunk of auditMessagesChunks) {
+            const embed = createEmbed('Audit Log', chunk);
+            await interaction.followUp({ embeds: [embed] });
+        }
     }
-    if (command === '/help') {
-        const subcommand = args[1]?.toLowerCase();
-        let helpMessage = '**Available Commands:**\n' +
-            '`/help` - Show this help message.\n' +
-            '`/balance` - Check your current coin balance.\n' +
-            '`/pay @user amount` - Pay or withdraw coins to a user (Teller role required).\n' +
-            '`/masspay amount @user1 @user2 ...` - Pay or withdraw coins to multiple users (Teller role required).\n' +
-            '`/audit` - View the transaction audit log (Teller role required).';
-        const commandHelp = {
-            'pay': '**/pay Command Help:**\nUsage: `/pay @user amount`\nExample: `/pay **@JohnDoe** 100`',
-            'masspay': '**/masspay Command Help:**\nUsage: `/masspay amount @user1 @user2 ...`\nExample: `/masspay 50 **@JohnDoe** **@JaneDoe**`',
-            'balance': '**/balance Command Help:**\nUsage: `/balance`\nExample: `/balance`',
-            'audit': '**/audit Command Help:**\nUsage: `/audit`\nExample: `/audit`'
-        };
-        helpMessage = subcommand && commandHelp[subcommand] || helpMessage;
-        const embed = createEmbed('Help', helpMessage);
-        message.channel.send({ embeds: [embed] });
+
+    if (commandName === 'help') {
+        const embed = createEmbed('OctoBank Commands', `**/balance** - Check your current OctoGold balance.\n**/pay** - Pay or withdraw OctoGold to a user.\n**/masspay** - Pay or withdraw OctoGold to multiple users.\n**/audit** - View the transaction audit log.`);
+        interaction.reply({ embeds: [embed] });
     }
 });
-client.once('ready', () => {
-    console.log('Bot is ready!');
-});
-client.login('YOUR_DISCORD_BOT_TOKEN');
+
+client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GDBLwf.XpoM-CjXhguBl2f4oukiVk4S6bqAP_DtLepTC8');  // Replace with your actual bot token!
