@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "discord.js": "^14.17.2",
-    "googleapis": "^144.0.0"
+    "googleapis": "^144.0.0",
+    "express": "^4.21.2"
   }
 }
