@@ -11,7 +11,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const auditLogPath = path.join(__dirname, 'audit_log.json');
 let auditLogData = loadAuditLog(auditLogPath);
 const app = express();
-const port = 3000;
+const port = 3002;
 
 // Read the credentials for OAuth
 fs.readFile(CREDENTIALS_PATH, (err, content) => {
