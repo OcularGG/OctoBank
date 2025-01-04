@@ -3,8 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const readline = require('readline');
+
 const CREDENTIALS_PATH = path.join(__dirname, 'client_secret.json');
-const TOKEN_PATH = path.join(__dirname, 'token.json');
+const TOKEN_PATH = path.join(__dirname, 'token_coin.json');  // Changed the token file name to 'token_coin.json'
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const coinsDataPath = path.join(__dirname, 'coins.json');
 let coinsData = loadData(coinsDataPath);
@@ -44,6 +45,7 @@ function getNewToken(oAuth2Client, callback) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',  // This ensures that we get a refresh_token
     scope: SCOPES,
+    prompt: 'consent',
   });
   console.log('Authorize this app by visiting this url:', authUrl);
 
