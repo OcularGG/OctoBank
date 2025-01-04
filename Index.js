@@ -85,11 +85,14 @@ async function updateBotStatus() {
 
 client.once('ready', async () => {
     console.log('Bot is ready!');
+
     const commands = [
         new SlashCommandBuilder().setName('balance').setDescription('Check your current OctoGold balance').addUserOption(option => option.setName('user').setDescription('User to check balance of')),
         new SlashCommandBuilder().setName('pay').setDescription('Pay or withdraw OctoGold to a user').addUserOption(option => option.setName('user').setDescription('User to pay').setRequired(true)).addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true)),
-        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw OctoGold to multiple users')
+        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw OctoGold to multiple users'),
+        new SlashCommandBuilder().setName('lootsplit').setDescription('Loot split calculator')
             .addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true))
+            .addIntegerOption(option => option.setName('repaircost').setDescription('Repair cost to subtract').setRequired(true))
             .addStringOption(option => option.setName('users').setDescription('Users to pay, mention multiple users with @').setRequired(true)),
         new SlashCommandBuilder().setName('audit').setDescription('View the transaction audit log'),
         new SlashCommandBuilder().setName('help').setDescription('Show help message'),
@@ -98,18 +101,30 @@ client.once('ready', async () => {
     ];
 
     try {
-        // Fetch the currently registered commands
-        const registeredCommands = await client.application.commands.fetch();
+        const guildId = '1097537634756214957'; // The guild ID where you want to register commands
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            console.error("Guild not found.");
+            return;
+        }
+
+        // Delete all global commands at startup (for testing or full reset)
+        console.log("Deleting all global commands...");
+        await client.application.commands.set([]);
+        
+        // Fetch the currently registered commands for the specific guild
+        const registeredCommands = await guild.commands.fetch();
         const existingCommandNames = registeredCommands.map(cmd => cmd.name);
 
         const commandsToRegister = [];
         const commandsToUpdate = [];
+        const commandsToDelete = [];
 
         // Loop through each new command
         for (const command of commands) {
             const commandName = command.name;
 
-            // If the command is not registered, add to commandsToRegister
+            // If the command is not registered, add it to commandsToRegister
             if (!existingCommandNames.includes(commandName)) {
                 console.log(`Registering new command: ${commandName}`);
                 commandsToRegister.push(command);
@@ -128,23 +143,32 @@ client.once('ready', async () => {
                     // Add the existing command ID for updating
                     command.id = existingCommand.id;
                     commandsToUpdate.push(command);
+                    commandsToDelete.push(existingCommand); // Mark the outdated command for deletion
                 } else {
                     console.log(`Command "${commandName}" up to date`);
                 }
             }
         }
 
-        // Register new commands
-        if (commandsToRegister.length > 0) {
-            console.log("Registering new commands...");
-            await client.application.commands.set(commandsToRegister);
+        // Delete outdated commands
+        if (commandsToDelete.length > 0) {
+            console.log("Deleting outdated commands...");
+            for (const command of commandsToDelete) {
+                await guild.commands.delete(command.id);
+            }
         }
 
-        // Update changed commands
+        // Register new commands for the guild
+        if (commandsToRegister.length > 0) {
+            console.log("Registering new commands...");
+            await guild.commands.set(commandsToRegister);
+        }
+
+        // Update changed commands for the guild
         if (commandsToUpdate.length > 0) {
             console.log("Updating changed commands...");
             for (const command of commandsToUpdate) {
-                await client.application.commands.edit(command.id, command.toJSON());
+                await guild.commands.edit(command.id, command.toJSON());
             }
         }
 
@@ -156,6 +180,9 @@ client.once('ready', async () => {
 
     await updateBotStatus();
 });
+
+
+
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand()) return;
 
@@ -167,6 +194,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.guildId !== allowedGuildId) {
         return sendErrorMessage(interaction, 'You are not allowed to use commands outside the authorized guild.');
     }
+
+    // Handle the command here...
+
 
 
     if (commandName === 'balance') {
@@ -445,8 +475,140 @@ client.on('interactionCreate', async (interaction) => {
             updateBotStatus();
         });
     }
+    if (commandName === 'lootsplit') {
+        if (!isTeller(interaction)) {
+            return sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+        }
     
-
+        const amount = args.getInteger('amount'); // Total loot amount
+        const repairCost = args.getInteger('repaircost'); // Repair cost to subtract
+        const userInput = args.getString('users'); // Users to split the loot with (as a string)
+    
+        // Validate inputs
+        if (isNaN(amount) || isNaN(repairCost) || amount <= 0 || repairCost < 0) {
+            return sendErrorMessage(interaction, 'Invalid command usage! Example: `/lootsplit 100 10 @user1 @user2 @user3`');
+        }
+    
+        // Calculate the remaining loot after subtracting repair cost
+        const remainingLoot = amount - repairCost;
+        if (remainingLoot <= 0) {
+            return sendErrorMessage(interaction, 'The loot after subtracting the repair cost must be greater than 0.');
+        }
+    
+        // Calculate the bot's 20% share (rounded down)
+        const botShare = Math.floor(remainingLoot * 0.2);
+        const userShare = Math.floor(remainingLoot * 0.8);
+    
+        // Parse the userInput string into an array of users
+        const mentionedUsers = userInput.split(/\s+/); // Split by spaces or any whitespace
+    
+        if (mentionedUsers.length === 0) {
+            return sendErrorMessage(interaction, 'No users mentioned to split the loot with!');
+        }
+    
+        // Calculate how much each user gets (rounded down)
+        const individualShare = Math.floor(userShare / mentionedUsers.length);
+    
+        // Prepare the response message
+        let userDetails = ""; // Store user split details
+    
+        // Distribute loot among mentioned users
+        for (const userId of mentionedUsers) {
+            const user = interaction.guild.members.cache.get(userId.replace(/[<@!>]/g, '')); // Extract user ID
+            if (!user) continue; // Skip if user is not found
+    
+            const username = user.user.username;
+            coinsData[username] = coinsData[username] || 0;
+            coinsData[username] += individualShare;
+    
+            // Log the transaction in the audit for this specific user
+            auditLog.push({
+                action: 'lootsplit',
+                from: interaction.user.username,
+                to: user.username,
+                amount: individualShare,
+                timestamp: Math.floor(Date.now() / 1000) // Use Unix timestamp in seconds
+            });
+    
+            // Add user to the details list with bold username and formatted share
+            const balanceTotal = coinsData[username];
+            userDetails += `- **${username}** received <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold, and now has <:OctoGold:1324817815470870609> **${balanceTotal.toLocaleString()}** OctoGold\n`;
+        }
+    
+        // Add the bot's share to the bot's balance (OctoBank#8670)
+        coinsData['OctoBank#8670'] = coinsData['OctoBank#8670'] || 0;
+        coinsData['OctoBank#8670'] += botShare;
+    
+        // Log the bot's transaction
+        auditLog.push({
+            action: 'lootsplit',
+            from: interaction.user.username,
+            to: 'OctoBank#8670',  // Bot's username
+            amount: botShare,
+            timestamp: Math.floor(Date.now() / 1000) // Use Unix timestamp in seconds
+        });
+    
+        // Save the updated data (coins and audit log)
+        saveData();
+    
+        const formattedAmount = Math.abs(amount).toLocaleString();
+        const formattedRepairCost = Math.abs(repairCost).toLocaleString();
+        const formattedBotShare = botShare.toLocaleString();
+        const formattedRemainingLoot = (remainingLoot - botShare).toLocaleString();
+        const individualShareFormatted = individualShare.toLocaleString();
+    
+        const actionMessage = `
+            **Loot Split**
+            <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold is being split.\n
+            __**Repair:**__ <:OctoGold:1324817815470870609> **${formattedRepairCost}** OctoGold
+            __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${formattedBotShare}** OctoGold
+            __**Being Split:**__ <:OctoGold:1324817815470870609> **${formattedRemainingLoot}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShareFormatted}** OctoGold.\n
+            **Share Details:**
+            ${userDetails}
+        `;
+    
+        // Define the timestamp before sending the message
+        const timestamp = Math.floor(Date.now() / 1000);
+    
+        // Function to send embed messages (splitting if necessary)
+        const sendEmbed = (content) => {
+            const embed = new EmbedBuilder()
+                .setColor('#ffbf00')
+                .setDescription(content)
+                .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+                .setTimestamp()  // Automatically adds the timestamp to the embed
+                .setFooter({
+                    text: `Submitted by ${interaction.user.username} `, // Use short date and time format
+                });
+    
+            interaction.reply({ embeds: [embed] });
+        };
+    
+        // Check if the content exceeds the 6000 character limit
+        if (actionMessage.length > 6000) {
+            const firstEmbedContent = actionMessage.slice(0, 6000); // First part of the message
+            const secondEmbedContent = actionMessage.slice(6000); // Remaining part of the message
+    
+            // Send the first embed
+            sendEmbed(firstEmbedContent);
+    
+            // Send the second embed with a slight delay
+            setTimeout(() => {
+                sendEmbed(secondEmbedContent);
+            }, 1000); // Add a slight delay to avoid rate limit errors
+        } else {
+            // Send a single embed if it's under the character limit
+            sendEmbed(actionMessage);
+        }
+    
+        // Update bot status after the transaction
+        await updateBotStatus();
+    }
+    
+    
+    
+    
+    
     if (commandName === 'help') {
         const helpEmbed = createEmbed(
             'Octobank Command Help',
