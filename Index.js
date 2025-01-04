@@ -3,6 +3,9 @@ const fs = require('fs');
 const path = './coins.json';
 const auditLogPath = './audit_log.json';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+require('./SheetsCode.js');
+require('./audit_log_compiler.js')
 
 let coinsData = loadData(path, {});
 let auditLog = loadData(auditLogPath, []);
@@ -318,15 +321,14 @@ client.on('interactionCreate', async (interaction) => {
         interaction.reply({ embeds: [embed] });
         saveData();
     }
-
     if (commandName === 'audit') {
         if (!isTeller(interaction)) {
             sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-
+    
         await interaction.deferReply();
-
+    
         const chunkSize = 15;
         const auditMessagesChunks = [];
         while (auditLog.length > 0) {
@@ -334,12 +336,103 @@ client.on('interactionCreate', async (interaction) => {
             const messages = chunk.map((log) => `**Action:** ${log.action}\n**From:** ${log.from}\n**To:** ${log.to}\n**Amount:** ${log.amount} OctoGold\n**Timestamp:** ${log.timestamp}`);
             auditMessagesChunks.push(messages.join('\n\n'));
         }
-
         for (const chunk of auditMessagesChunks) {
             const embed = createEmbed('Audit Log', chunk);
             await interaction.followUp({ embeds: [embed] });
         }
     }
+    
+    if (commandName === 'payout') {
+        if (!isTeller(interaction)) {
+            return sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+        }
+    
+        const targetUser = args.getUser('user');
+        if (!targetUser) {
+            return sendErrorMessage(interaction, 'Please mention a user to pay out to.');
+        }
+    
+        const balance = coinsData[targetUser.username] || 0;
+    
+        const payoutEmbed = createEmbed(
+            'Confirm Payout',
+            `**${targetUser.username}** has <:OctoGold:1324817815470870609> ${balance} OctoGold in their bank.\nAre you sure you want to pay them out?`
+        ).setFooter({text: 'Once completed, this payout cannot be undone.'});
+    
+        const yesButton = new ButtonBuilder()
+            .setCustomId('yes')
+            .setLabel('Yes')
+            .setStyle(ButtonStyle.Success);
+    
+        const noButton = new ButtonBuilder()
+            .setCustomId('no')
+            .setLabel('No')
+            .setStyle(ButtonStyle.Danger);
+    
+        const row = new ActionRowBuilder().addComponents(yesButton, noButton);
+    
+        await interaction.reply({
+            embeds: [payoutEmbed],
+            components: [row],
+            ephemeral: true
+        });
+    
+        const filter = (buttonInteraction) => buttonInteraction.user.id === interaction.user.id;
+        const collector = interaction.channel.createMessageComponentCollector({
+            filter,
+            time: 60000, // Buttons now expire after 1 minute (60000ms)
+        });
+    
+        collector.on('collect', async (buttonInteraction) => {
+            if (buttonInteraction.customId === 'yes') {
+                // Payout the user
+                coinsData[targetUser.username] = 0; // Zero out the balance
+                auditLog.push({
+                    action: 'payout',
+                    from: interaction.user.username,
+                    to: targetUser.username,
+                    amount: balance, // Log the payout amount
+                    timestamp: formatTimestamp(new Date())
+                });
+    
+                saveData();
+    
+                const successEmbed = createEmbed(
+                    'Payout Complete',
+                    `**${targetUser.username}** has successfully received their payout of <:OctoGold:1324817815470870609> ${balance} OctoGold. Their balance is now cleared.`
+                );
+    
+                await buttonInteraction.update({ embeds: [successEmbed], components: [] });
+            } else if (buttonInteraction.customId === 'no') {
+                // Cancel payout
+                const cancelEmbed = createEmbed(
+                    'Payout Cancelled',
+                    `The payout to **${targetUser.username}** has been cancelled.`
+                );
+    
+                await buttonInteraction.update({ embeds: [cancelEmbed], components: [] });
+            }
+    
+            collector.stop(); // Stop the collector after a button is pressed
+    
+            // Update the bot status after the payout transaction (successful or cancelled)
+            await updateBotStatus();
+        });
+    
+        collector.on('end', (collected, reason) => {
+            if (reason === 'time') {
+                const timeoutEmbed = createEmbed(
+                    'Payout Timeout',
+                    'The payout request has expired due to inactivity.'
+                );
+                interaction.editReply({ embeds: [timeoutEmbed], components: [] });
+            }
+    
+            // Update the bot status after timeout
+            updateBotStatus();
+        });
+    }
+    
 
     if (commandName === 'help') {
         const helpEmbed = createEmbed(
