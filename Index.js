@@ -66,12 +66,14 @@ function formatTimestamp(date) {
 
 async function updateBotStatus() {
     let totalOctogold = Object.values(coinsData).reduce((sum, balance) => sum + balance, 0);
-    console.log('Total Octogold calculated:', totalOctogold);
+
+    const formattedTotalOctogold = totalOctogold.toLocaleString();
+    console.log('Total Octogold calculated:', formattedTotalOctogold);
     try {
         await client.user.setPresence({
             status: 'online',
             activities: [{
-                name: ` ${totalOctogold} OctoGold`,
+                name: ` ${formattedTotalOctogold} OctoGold`,
                 type: ActivityType.Watching
             }]
         });
@@ -170,10 +172,11 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'balance') {
         const targetUser = args.getUser('user') || interaction.user;
         const balance = coinsData[targetUser.username] || 0;
+        const formattedBalance = Math.abs(balance).toLocaleString();
 
         const embed = new EmbedBuilder()
             .setColor('#ffbf00')
-            .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> ${balance} OctoGold.`)
+            .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold.`)
             .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
         interaction.reply({ embeds: [embed] });
     }
@@ -194,9 +197,12 @@ client.on('interactionCreate', async (interaction) => {
         const actionType = amount < 0 ? 'withdraw' : 'deposit';
         const actionLink = actionType === 'withdraw' ? '[**OctoBank Withdrawal**](https://octobank.ocular-gaming.net/)' : '[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)';
         handleTransaction(interaction, targetUser, amount, actionType);
+
+        const formattedAmount = Math.abs(amount).toLocaleString();
+
         const actionMessage = actionType === 'withdraw'
-            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold from **${targetUser.username}**'s wallet.`
-            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold to **${targetUser.username}**'s wallet.`;
+            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from **${targetUser.username}**'s wallet.`
+            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold to **${targetUser.username}**'s wallet.`;
 
         const timestamp = formatTimestamp(new Date());
 
@@ -248,11 +254,14 @@ client.on('interactionCreate', async (interaction) => {
         });
 
         saveData();
+        const formattedAmount = Math.abs(amount).toLocaleString()
+
+    
 
         // Create the success message
         const embed = new EmbedBuilder()
             .setColor('#ffbf00')
-            .setDescription(`**${targetUser.username}** just spent <:OctoGold:1324817815470870609> **${amount}** OctoGold in the guild market!`)
+            .setDescription(`**${targetUser.username}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!`)
             .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
             .setFooter({ text: `Transaction completed by ${interaction.user.username}` });
 
@@ -307,9 +316,11 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
+        const formattedAmount = Math.abs(amount).toLocaleString
+
         actionMessage = actionType === 'withdraw'
-            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold from the following users' wallets:\n${usersList.join('\n')}`
-            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${Math.abs(amount)}** OctoGold into the following users' wallets:\n${usersList.join('\n')}`;
+            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n${usersList.join('\n')}`
+            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n${usersList.join('\n')}`;
 
         const actionText = actionType === 'withdraw'
             ? '[**Octobank Mass Withdrawal**](https://octobank.ocular-gaming.net/)'
@@ -353,10 +364,12 @@ client.on('interactionCreate', async (interaction) => {
         }
     
         const balance = coinsData[targetUser.username] || 0;
+
+        const formattedBalance = Math.abs(balance).toLocaleString();
     
         const payoutEmbed = createEmbed(
             'Confirm Payout',
-            `**${targetUser.username}** has <:OctoGold:1324817815470870609> ${balance} OctoGold in their bank.\nAre you sure you want to pay them out?`
+            `**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold in their bank.\nAre you sure you want to pay them out?`
         ).setFooter({text: 'Once completed, this payout cannot be undone.'});
     
         const yesButton = new ButtonBuilder()
@@ -399,7 +412,7 @@ client.on('interactionCreate', async (interaction) => {
     
                 const successEmbed = createEmbed(
                     'Payout Complete',
-                    `**${targetUser.username}** has successfully received their payout of <:OctoGold:1324817815470870609> ${balance} OctoGold. Their balance is now cleared.`
+                    `**${targetUser.username}** has successfully received their payout of <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold. Their balance is now cleared.`
                 );
     
                 await buttonInteraction.update({ embeds: [successEmbed], components: [] });

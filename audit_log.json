@@ -803,5 +803,19 @@
     "to": "OctoBank",
     "amount": -10,
     "timestamp": "04/01/2025 07:21"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 1000000,
+    "timestamp": "04/01/2025 11:06"
+  },
+  {
+    "action": "withdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -1000000,
+    "timestamp": "04/01/2025 11:06"
   }
 ]
