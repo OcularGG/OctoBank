@@ -320,7 +320,27 @@ client.on('interactionCreate', async (interaction) => {
         interaction.reply({ embeds: [embed] });
         saveData();
     }
-
+    if (commandName === 'audit') {
+        if (!isTeller(interaction)) {
+            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+            return;
+        }
+    
+        await interaction.deferReply();
+    
+        const chunkSize = 15;
+        const auditMessagesChunks = [];
+        while (auditLog.length > 0) {
+            const chunk = auditLog.splice(0, chunkSize);
+            const messages = chunk.map((log) => `**Action:** ${log.action}\n**From:** ${log.from}\n**To:** ${log.to}\n**Amount:** ${log.amount} OctoGold\n**Timestamp:** ${log.timestamp}`);
+            auditMessagesChunks.push(messages.join('\n\n'));
+        }
+        for (const chunk of auditMessagesChunks) {
+            const embed = createEmbed('Audit Log', chunk);
+            await interaction.followUp({ embeds: [embed] });
+        }
+    }
+    
     if (commandName === 'payout') {
         if (!isTeller(interaction)) {
             return sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
