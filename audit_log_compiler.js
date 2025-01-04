@@ -11,7 +11,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const auditLogPath = path.join(__dirname, 'audit_log.json');
 let auditLogData = loadAuditLog(auditLogPath);
 const app = express();
-const port = 3000;
+const port = 3002;
 
 // Read the credentials for OAuth
 fs.readFile(CREDENTIALS_PATH, (err, content) => {
@@ -139,7 +139,7 @@ function startUpdatingSheet(auth) {
     auditLogData = loadAuditLog(auditLogPath);
     console.log('Loaded audit log data:', auditLogData); // Debugging log
     updateSheet(auth);
-  }, 10000);  // Changed to 10000 milliseconds (10 seconds)
+  }, 60000);  // Changed to 10000 milliseconds (10 seconds)
 }
 
 // Local server to handle OAuth
