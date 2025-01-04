@@ -4,7 +4,6 @@ const path = './coins.json';
 const auditLogPath = './audit_log.json';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-require('./SheetsCode.js');
 
 let coinsData = loadData(path, {});
 let auditLog = loadData(auditLogPath, []);
@@ -83,13 +82,15 @@ async function updateBotStatus() {
 client.once('ready', async () => {
     console.log('Bot is ready!');
     const commands = [
-        new SlashCommandBuilder().setName('balance').setDescription('Check your current Octogold balance').addUserOption(option => option.setName('user').setDescription('User to check balance of')),
-        new SlashCommandBuilder().setName('pay').setDescription('Pay or withdraw Octogold to a user').addUserOption(option => option.setName('user').setDescription('User to pay').setRequired(true)).addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true)),
-        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw Octogold to multiple users')
+        new SlashCommandBuilder().setName('balance').setDescription('Check your current OctoGold balance').addUserOption(option => option.setName('user').setDescription('User to check balance of')),
+        new SlashCommandBuilder().setName('pay').setDescription('Pay or withdraw OctoGold to a user').addUserOption(option => option.setName('user').setDescription('User to pay').setRequired(true)).addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true)),
+        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw OctoGold to multiple users')
             .addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true))
             .addStringOption(option => option.setName('users').setDescription('Users to pay, mention multiple users with @').setRequired(true)),
         new SlashCommandBuilder().setName('audit').setDescription('View the transaction audit log'),
-        new SlashCommandBuilder().setName('help').setDescription('Show help message')
+        new SlashCommandBuilder().setName('help').setDescription('Show help message'),
+        new SlashCommandBuilder().setName('buy').setDescription('Buy something from the guild market').addUserOption(option => option.setName('user').setDescription('User to spend OctoGold').setRequired(true)).addIntegerOption(option => option.setName('amount').setDescription('Amount to spend').setRequired(true)),
+        new SlashCommandBuilder().setName('payout').setDescription('Pay out OctoGold to a user (Teller only)').addUserOption(option => option.setName('user').setDescription('User to payout').setRequired(true))
     ];
 
     const guildId = '1097537634756214957';
@@ -97,21 +98,26 @@ client.once('ready', async () => {
     try {
         const guild = client.guilds.cache.get(guildId);
         if (guild) {
+            console.log("Attempting to clear guild commands...");
+    
             await guild.commands.set([]);
             console.log("Guild commands cleared for guild");
-
+    
+            console.log("Attempting to register new guild commands...");
             await guild.commands.set(commands);
             console.log("Guild commands registered for guild");
         } else {
             console.log("Guild not found!");
         }
-
+    
+        console.log("Attempting to clear global commands...");
         await client.application.commands.set([]);
         console.log("Global commands cleared");
-
+    
     } catch (error) {
         console.error("Error registering commands:", error);
     }
+    
 
     await updateBotStatus();
 });
@@ -161,6 +167,60 @@ client.on('interactionCreate', async (interaction) => {
             .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
         interaction.reply({ embeds: [embed] });
         saveData();
+    }
+
+    if (commandName === 'buy') {
+        if (!isTeller(interaction)) {
+            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+            return;
+        }
+
+        const targetUser = args.getUser('user');
+        const amount = args.getInteger('amount');
+
+        if (!targetUser || isNaN(amount)) {
+            sendErrorMessage(interaction, 'Invalid command usage! Example: `/buy @user 100`');
+            return;
+        }
+
+        if (amount <= 0) {
+            sendErrorMessage(interaction, 'The amount must be greater than 0.');
+            return;
+        }
+
+        const targetUsername = targetUser.username;
+        const currentBalance = coinsData[targetUsername] || 0;
+
+        if (currentBalance < amount) {
+            sendErrorMessage(interaction, `${targetUsername} does not have enough <:OctoGold:1324817815470870609> OctoGold to make this purchase.`);
+            return;
+        }
+
+        // Subtract the amount from the user's balance
+        coinsData[targetUsername] -= amount;
+
+        // Log the transaction to the audit log
+        auditLog.push({
+            action: 'buy',
+            from: interaction.user.username,
+            to: targetUser.username,
+            amount: -amount, // Negative because it's a subtraction
+            timestamp: formatTimestamp(new Date())
+        });
+
+        saveData();
+
+        // Create the success message
+        const embed = new EmbedBuilder()
+            .setColor('#ffbf00')
+            .setDescription(`**${targetUser.username}** just spent <:OctoGold:1324817815470870609> **${amount}** OctoGold in the guild market!`)
+            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+            .setFooter({ text: `Transaction completed by ${interaction.user.username}` });
+
+        interaction.reply({ embeds: [embed] });
+
+        // Update bot status
+        await updateBotStatus();
     }
 
     if (commandName === 'masspay') {
@@ -251,10 +311,12 @@ client.on('interactionCreate', async (interaction) => {
             `**/balance**: Check your current OctoGold balance\n` +
             `**/pay**: Pay or withdraw OctoGold to a user (Teller only)\n` +
             `**/masspay**: Pay or withdraw OctoGold to multiple users (Teller only)\n` +
-            `**/audit**: View the transaction audit log (Teller only)`
+            `**/audit**: View the transaction audit log (Teller only)\n` +
+            `**/buy**: Spend OctoGold in the guild market (Teller only)\n` +
+            `**/payout**: Pay out OctoGold to a user (Teller only)`
         );
         interaction.reply({ embeds: [helpEmbed] });
     }
-});
 
+});
 client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GOc63x.ZUYK4liah20puTginEMJOBG_Li8EUvkOJu4JVk');
