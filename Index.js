@@ -4,7 +4,6 @@ const path = './coins.json';
 const auditLogPath = './audit_log.json';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-
 let coinsData = loadData(path, {});
 let auditLog = loadData(auditLogPath, []);
 
@@ -93,40 +92,77 @@ client.once('ready', async () => {
         new SlashCommandBuilder().setName('payout').setDescription('Pay out OctoGold to a user (Teller only)').addUserOption(option => option.setName('user').setDescription('User to payout').setRequired(true))
     ];
 
-    const guildId = '1097537634756214957';
-
     try {
-        const guild = client.guilds.cache.get(guildId);
-        if (guild) {
-            console.log("Attempting to clear guild commands...");
-    
-            await guild.commands.set([]);
-            console.log("Guild commands cleared for guild");
-    
-            console.log("Attempting to register new guild commands...");
-            await guild.commands.set(commands);
-            console.log("Guild commands registered for guild");
-        } else {
-            console.log("Guild not found!");
+        // Fetch the currently registered commands
+        const registeredCommands = await client.application.commands.fetch();
+        const existingCommandNames = registeredCommands.map(cmd => cmd.name);
+
+        const commandsToRegister = [];
+        const commandsToUpdate = [];
+
+        // Loop through each new command
+        for (const command of commands) {
+            const commandName = command.name;
+
+            // If the command is not registered, add to commandsToRegister
+            if (!existingCommandNames.includes(commandName)) {
+                console.log(`Registering new command: ${commandName}`);
+                commandsToRegister.push(command);
+            } else {
+                // Compare only the options (arguments) with the existing ones
+                const existingCommand = registeredCommands.find(cmd => cmd.name === commandName);
+
+                const isSameArguments = existingCommand.options.length === command.options.length
+                    && existingCommand.options.every((option, index) => {
+                        const newOption = command.options[index];
+                        return option.name === newOption.name && option.description === newOption.description && option.required === newOption.required;
+                    });
+
+                if (!isSameArguments) {
+                    console.log(`Updating command: ${commandName}`);
+                    // Add the existing command ID for updating
+                    command.id = existingCommand.id;
+                    commandsToUpdate.push(command);
+                } else {
+                    console.log(`Command "${commandName}" up to date`);
+                }
+            }
         }
-    
-        console.log("Attempting to clear global commands...");
-        await client.application.commands.set([]);
-        console.log("Global commands cleared");
-    
+
+        // Register new commands
+        if (commandsToRegister.length > 0) {
+            console.log("Registering new commands...");
+            await client.application.commands.set(commandsToRegister);
+        }
+
+        // Update changed commands
+        if (commandsToUpdate.length > 0) {
+            console.log("Updating changed commands...");
+            for (const command of commandsToUpdate) {
+                await client.application.commands.edit(command.id, command.toJSON());
+            }
+        }
+
+        console.log("Commands registered/updated successfully");
+
     } catch (error) {
         console.error("Error registering commands:", error);
     }
-    
 
     await updateBotStatus();
 });
-
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand()) return;
 
     const { commandName } = interaction;
     const args = interaction.options;
+
+    // Ensure only users from the specified guild can use commands
+    const allowedGuildId = '1097537634756214957';
+    if (interaction.guildId !== allowedGuildId) {
+        return sendErrorMessage(interaction, 'You are not allowed to use commands outside the authorized guild.');
+    }
+
 
     if (commandName === 'balance') {
         const targetUser = args.getUser('user') || interaction.user;

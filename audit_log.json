@@ -593,5 +593,75 @@
     "to": "sedoctor",
     "amount": 1,
     "timestamp": "2025-01-03T20:03:25.411Z"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 10,
+    "timestamp": "04/01/2025 00:45"
+  },
+  {
+    "action": "withdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -10,
+    "timestamp": "04/01/2025 00:45"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": 10,
+    "timestamp": "04/01/2025 00:46"
+  },
+  {
+    "action": "masspay",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 10,
+    "timestamp": "04/01/2025 00:46"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "Ethan",
+    "amount": -10,
+    "timestamp": "04/01/2025 00:46"
+  },
+  {
+    "action": "masswithdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -10,
+    "timestamp": "04/01/2025 00:46"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 100,
+    "timestamp": "04/01/2025 00:46"
+  },
+  {
+    "action": "buy",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -100,
+    "timestamp": "04/01/2025 00:47"
+  },
+  {
+    "action": "deposit",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": 100,
+    "timestamp": "04/01/2025 00:47"
+  },
+  {
+    "action": "withdraw",
+    "from": "sedoctor",
+    "to": "OctoBank",
+    "amount": -100,
+    "timestamp": "04/01/2025 00:48"
   }
 ]
