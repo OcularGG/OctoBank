@@ -139,7 +139,7 @@ function startUpdatingSheet(auth) {
     auditLogData = loadAuditLog(auditLogPath);
     console.log('Loaded audit log data:', auditLogData); // Debugging log
     updateSheet(auth);
-  }, 10000);  // Changed to 10000 milliseconds (10 seconds)
+  }, 60000);  // Changed to 10000 milliseconds (10 seconds)
 }
 
 // Local server to handle OAuth
