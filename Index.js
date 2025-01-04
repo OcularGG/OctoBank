@@ -4,7 +4,8 @@ const path = './coins.json';
 const auditLogPath = './audit_log.json';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-
+require('./SheetsCode.js');
+require('./audit_log_compiler.js')
 
 let coinsData = loadData(path, {});
 let auditLog = loadData(auditLogPath, []);
