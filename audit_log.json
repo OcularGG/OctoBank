@@ -817,5 +817,132 @@
     "to": "OctoBank",
     "amount": -1000000,
     "timestamp": "04/01/2025 11:06"
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "amount": 140000,
+    "timestamp": 1736033311
+  },
+  {
+    "action": "lootsplit",
+    "from": "thelitefootgg",
+    "to": "OctoBank#8670",
+    "amount": 700000,
+    "timestamp": 1736033311
   }
 ]
