@@ -60,7 +60,6 @@ function getNewToken(oAuth2Client, callback) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',  // This ensures that we get a refresh_token
     scope: SCOPES,
-    prompt: 'consent',  // Adding 'consent' to always prompt the user for consent
   });
   console.log('Authorize this app by visiting this url:', authUrl);
 
