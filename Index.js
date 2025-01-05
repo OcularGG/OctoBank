@@ -581,15 +581,15 @@ client.on('interactionCreate', async (interaction) => {
             userDetails += `- **${username}** received <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold, and now has <:OctoGold:1324817815470870609> **${balanceTotal.toLocaleString()}** OctoGold\n`;
         }
     
-        // Add the bot's share to the bot's balance (OctoBank#8670)
-        coinsData['OctoBank#8670'] = coinsData['OctoBank#8670'] || 0;
-        coinsData['OctoBank#8670'] += botShare;
+        // Add the bot's share to the bot's balance (OctoBank)
+        coinsData['OctoBank'] = coinsData['OctoBank'] || 0;
+        coinsData['OctoBank'] += botShare;
     
         // Log the bot's transaction
         auditLog.push({
             action: 'lootsplit',
             from: interaction.user.username,
-            to: 'OctoBank#8670',  // Bot's username
+            to: 'OctoBank',  // Bot's username
             amount: botShare,
             timestamp: Math.floor(Date.now() / 1000) // Use Unix timestamp in seconds
         });
