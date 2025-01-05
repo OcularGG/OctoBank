@@ -89,7 +89,9 @@ client.once('ready', async () => {
     const commands = [
         new SlashCommandBuilder().setName('balance').setDescription('Check your current OctoGold balance').addUserOption(option => option.setName('user').setDescription('User to check balance of')),
         new SlashCommandBuilder().setName('pay').setDescription('Pay or withdraw OctoGold to a user').addUserOption(option => option.setName('user').setDescription('User to pay').setRequired(true)).addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true)),
-        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw OctoGold to multiple users'),
+        new SlashCommandBuilder().setName('masspay').setDescription('Pay or withdraw OctoGold to multiple users')
+            .addIntegerOption(option => option.setName('amount').setDescription('Amount to pay or withdraw').setRequired(true))  // Amount option
+            .addStringOption(option => option.setName('users').setDescription('Users to pay, mention multiple users with @').setRequired(true)),  // Users option
         new SlashCommandBuilder().setName('lootsplit').setDescription('Loot split calculator')
             .addIntegerOption(option => option.setName('amount').setDescription('Amount to pay').setRequired(true))
             .addIntegerOption(option => option.setName('repaircost').setDescription('Repair cost to subtract').setRequired(true))
@@ -111,13 +113,12 @@ client.once('ready', async () => {
         // Delete all global commands at startup (for testing or full reset)
         console.log("Deleting all global commands...");
         await client.application.commands.set([]);
-        
+
         // Fetch the currently registered commands for the specific guild
         const registeredCommands = await guild.commands.fetch();
         const existingCommandNames = registeredCommands.map(cmd => cmd.name);
 
         const commandsToRegister = [];
-        const commandsToUpdate = [];
         const commandsToDelete = [];
 
         // Loop through each new command
@@ -139,11 +140,9 @@ client.once('ready', async () => {
                     });
 
                 if (!isSameArguments) {
-                    console.log(`Updating command: ${commandName}`);
-                    // Add the existing command ID for updating
-                    command.id = existingCommand.id;
-                    commandsToUpdate.push(command);
-                    commandsToDelete.push(existingCommand); // Mark the outdated command for deletion
+                    console.log(`Command ${commandName} is outdated, deleting and re-registering.`);
+                    commandsToDelete.push(existingCommand);  // Mark the outdated command for deletion
+                    commandsToRegister.push(command);  // Re-register the new command
                 } else {
                     console.log(`Command "${commandName}" up to date`);
                 }
@@ -161,14 +160,8 @@ client.once('ready', async () => {
         // Register new commands for the guild
         if (commandsToRegister.length > 0) {
             console.log("Registering new commands...");
-            await guild.commands.set(commandsToRegister);
-        }
-
-        // Update changed commands for the guild
-        if (commandsToUpdate.length > 0) {
-            console.log("Updating changed commands...");
-            for (const command of commandsToUpdate) {
-                await guild.commands.edit(command.id, command.toJSON());
+            for (const command of commandsToRegister) {
+                await guild.commands.create(command);
             }
         }
 
@@ -180,6 +173,8 @@ client.once('ready', async () => {
 
     await updateBotStatus();
 });
+
+
 
 
 
@@ -202,7 +197,7 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'balance') {
         const targetUser = args.getUser('user') || interaction.user;
         const balance = coinsData[targetUser.username] || 0;
-        const formattedBalance = Math.abs(balance).toLocaleString();
+        const formattedBalance = balance.toLocaleString();
 
         const embed = new EmbedBuilder()
             .setColor('#ffbf00')
@@ -216,116 +211,186 @@ client.on('interactionCreate', async (interaction) => {
             sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-
+    
         const targetUser = args.getUser('user');
         const amount = args.getInteger('amount');
         if (!targetUser || isNaN(amount)) {
             sendErrorMessage(interaction, 'Invalid command usage! Example: `/pay @user 100`');
             return;
         }
-
+    
         const actionType = amount < 0 ? 'withdraw' : 'deposit';
         const actionLink = actionType === 'withdraw' ? '[**OctoBank Withdrawal**](https://octobank.ocular-gaming.net/)' : '[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)';
         handleTransaction(interaction, targetUser, amount, actionType);
-
+    
         const formattedAmount = Math.abs(amount).toLocaleString();
-
+    
         const actionMessage = actionType === 'withdraw'
             ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from **${targetUser.username}**'s wallet.`
             : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold to **${targetUser.username}**'s wallet.`;
-
-        const timestamp = formatTimestamp(new Date());
-
+    
         const embed = new EmbedBuilder()
             .setColor('#ffbf00')
-            .setDescription(`${actionLink}\n\n${actionMessage}\n\n${timestamp}`)
-            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
+            .setDescription(`${actionLink}\n\n${actionMessage}`)
+            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+            .setTimestamp();  // Automatically sets the current timestamp
+    
         interaction.reply({ embeds: [embed] });
         saveData();
     }
+    
 
     if (commandName === 'buy') {
         if (!isTeller(interaction)) {
             sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-
+    
         const targetUser = args.getUser('user');
         const amount = args.getInteger('amount');
-
+    
         if (!targetUser || isNaN(amount)) {
             sendErrorMessage(interaction, 'Invalid command usage! Example: `/buy @user 100`');
             return;
         }
-
+    
         if (amount <= 0) {
             sendErrorMessage(interaction, 'The amount must be greater than 0.');
             return;
         }
-
-        const targetUsername = targetUser.username;
-        const currentBalance = coinsData[targetUsername] || 0;
-
-        if (currentBalance < amount) {
-            sendErrorMessage(interaction, `${targetUsername} does not have enough <:OctoGold:1324817815470870609> OctoGold to make this purchase.`);
-            return;
-        }
-
-        // Subtract the amount from the user's balance
-        coinsData[targetUsername] -= amount;
-
-        // Log the transaction to the audit log
-        auditLog.push({
-            action: 'buy',
-            from: interaction.user.username,
-            to: targetUser.username,
-            amount: -amount, // Negative because it's a subtraction
-            timestamp: formatTimestamp(new Date())
-        });
-
-        saveData();
-        const formattedAmount = Math.abs(amount).toLocaleString()
-
     
-
-        // Create the success message
-        const embed = new EmbedBuilder()
-            .setColor('#ffbf00')
-            .setDescription(`**${targetUser.username}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!`)
-            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
-            .setFooter({ text: `Transaction completed by ${interaction.user.username}` });
-
-        interaction.reply({ embeds: [embed] });
-
-        // Update bot status
-        await updateBotStatus();
+        const targetUsername = targetUser.username;
+        let currentBalance = coinsData[targetUsername] || 0;
+    
+        // Format the amount and current balance for display
+        const formattedAmount = amount.toLocaleString();
+        const formattedCurrentBalance = currentBalance.toLocaleString();
+    
+        // Check if the user will go negative after the purchase
+        if (currentBalance < amount) {
+            const amountToGoNegative = (amount - currentBalance).toLocaleString();
+    
+            // If so, create a warning message
+            const warningEmbed = new EmbedBuilder()
+                .setColor('#ff0000')
+                .setDescription(`**Warning:** **${targetUser.username}** is about to go into the negative by <:OctoGold:1324817815470870609> **${amountToGoNegative}** OctoGold! Are you sure you want to proceed?`);
+    
+            const yesButton = new ButtonBuilder()
+                .setCustomId('yes')
+                .setLabel('Yes')
+                .setStyle(ButtonStyle.Success);
+    
+            const noButton = new ButtonBuilder()
+                .setCustomId('no')
+                .setLabel('No')
+                .setStyle(ButtonStyle.Danger);
+    
+            const row = new ActionRowBuilder().addComponents(yesButton, noButton);
+    
+            await interaction.reply({
+                embeds: [warningEmbed],
+                components: [row],
+                ephemeral: true,
+            });
+    
+            const filter = (buttonInteraction) => buttonInteraction.user.id === interaction.user.id;
+            const collector = interaction.channel.createMessageComponentCollector({
+                filter,
+                time: 60000, // 1 minute for the user to respond
+            });
+    
+            collector.on('collect', async (buttonInteraction) => {
+                if (buttonInteraction.customId === 'yes') {
+                    // Proceed with the transaction, even though the user goes negative
+                    coinsData[targetUsername] -= amount; // Update the balance
+    
+                    // Log the transaction to the audit log
+                    auditLog.push({
+                        action: 'buy',
+                        from: interaction.user.username,
+                        to: targetUser.username,
+                        amount: -amount, // Negative because it's a subtraction
+                        timestamp: formatTimestamp(new Date()),
+                    });
+    
+                    saveData();
+    
+                    // Success message
+                    const successEmbed = new EmbedBuilder()
+                        .setColor('#ffbf00')
+                        .setDescription(`**${targetUser.username}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!`)
+                        .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+                        .setFooter({ text: `Transaction completed by ${interaction.user.username}` });
+    
+                    await buttonInteraction.update({ embeds: [successEmbed], components: [] });
+    
+                } else if (buttonInteraction.customId === 'no') {
+                    // Cancel the transaction
+                    const cancelEmbed = new EmbedBuilder()
+                        .setColor('#ff0000')
+                        .setDescription(`The purchase by **${targetUser.username}** has been cancelled.`);
+    
+                    await buttonInteraction.update({ embeds: [cancelEmbed], components: [] });
+                }
+    
+                collector.stop(); // Stop the collector after the user has responded
+            });
+    
+        } else {
+            // If the user can afford the purchase, proceed as usual
+            coinsData[targetUsername] -= amount;
+    
+            // Log the transaction to the audit log
+            auditLog.push({
+                action: 'buy',
+                from: interaction.user.username,
+                to: targetUser.username,
+                amount: -amount, // Negative because it's a subtraction
+                timestamp: formatTimestamp(new Date()),
+            });
+    
+            saveData();
+    
+            // Success message
+            const embed = new EmbedBuilder()
+                .setColor('#ffbf00')
+                .setDescription(`**${targetUser.username}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!`)
+                .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+                .setFooter({ text: `Transaction completed by ${interaction.user.username}` });
+    
+            interaction.reply({ embeds: [embed] });
+    
+            // Update bot status
+            await updateBotStatus();
+        }
     }
-
+    
+    
     if (commandName === 'masspay') {
         if (!isTeller(interaction)) {
             sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-
+    
         const amount = args.getInteger('amount');
         const userInput = args.getString('users');
         if (isNaN(amount) || amount === 0 || !userInput) {
             sendErrorMessage(interaction, 'Invalid command usage! Example: `/masspay 100 @user1 @user2 @user3`');
             return;
         }
-
+    
         const mentionRegex = /<@!?(\d+)>/g;
         const mentionedUserIds = [];
         let match;
         while ((match = mentionRegex.exec(userInput)) !== null) {
             mentionedUserIds.push(match[1]);
         }
-
+    
         if (mentionedUserIds.length === 0) {
             sendErrorMessage(interaction, 'No valid user mentions found! Example: `/masspay 100 @user1 @user2 @user3`');
             return;
         }
-
+    
         let actionMessage;
         let actionType = amount < 0 ? 'withdraw' : 'deposit';
         let usersList = [];
@@ -341,47 +406,28 @@ client.on('interactionCreate', async (interaction) => {
                     from: interaction.user.username,
                     to: targetUser.user.username,
                     amount,
-                    timestamp: formatTimestamp(new Date())
+                    timestamp: formatTimestamp(new Date())  // This is where timestamp was manually set
                 });
             }
         }
-
-        const formattedAmount = Math.abs(amount).toLocaleString
-
+    
+        const formattedAmount = Math.abs(amount).toLocaleString();
+    
         actionMessage = actionType === 'withdraw'
             ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n${usersList.join('\n')}`
             : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n${usersList.join('\n')}`;
-
+    
         const actionText = actionType === 'withdraw'
             ? '[**Octobank Mass Withdrawal**](https://octobank.ocular-gaming.net/)'
             : '[**Octobank Mass Deposit**](https://octobank.ocular-gaming.net/)';
-
-        const timestamp = formatTimestamp(new Date());
-
-        const embed = createEmbed('Mass Transaction Successful', `${actionText}\n\n${actionMessage}\n\n${timestamp}`);
+    
+        const embed = createEmbed('Mass Transaction Successful', `${actionText}\n\n${actionMessage}`);
+        embed.setTimestamp();  // This automatically sets the timestamp
+    
         interaction.reply({ embeds: [embed] });
         saveData();
     }
-    if (commandName === 'audit') {
-        if (!isTeller(interaction)) {
-            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
-            return;
-        }
     
-        await interaction.deferReply();
-    
-        const chunkSize = 15;
-        const auditMessagesChunks = [];
-        while (auditLog.length > 0) {
-            const chunk = auditLog.splice(0, chunkSize);
-            const messages = chunk.map((log) => `**Action:** ${log.action}\n**From:** ${log.from}\n**To:** ${log.to}\n**Amount:** ${log.amount} OctoGold\n**Timestamp:** ${log.timestamp}`);
-            auditMessagesChunks.push(messages.join('\n\n'));
-        }
-        for (const chunk of auditMessagesChunks) {
-            const embed = createEmbed('Audit Log', chunk);
-            await interaction.followUp({ embeds: [embed] });
-        }
-    }
     
     if (commandName === 'payout') {
         if (!isTeller(interaction)) {
@@ -395,7 +441,7 @@ client.on('interactionCreate', async (interaction) => {
     
         const balance = coinsData[targetUser.username] || 0;
 
-        const formattedBalance = Math.abs(balance).toLocaleString();
+        const formattedBalance = balance.toLocaleString();
     
         const payoutEmbed = createEmbed(
             'Confirm Payout',
@@ -617,7 +663,8 @@ client.on('interactionCreate', async (interaction) => {
             `**/masspay**: Pay or withdraw OctoGold to multiple users (Teller only)\n` +
             `**/audit**: View the transaction audit log (Teller only)\n` +
             `**/buy**: Spend OctoGold in the guild market (Teller only)\n` +
-            `**/payout**: Pay out OctoGold to a user (Teller only)`
+            `**/payout**: Pay out OctoGold to a user (Teller only)\n` +
+            `**/lootsplit**: Lootsplit calculator`
         );
         interaction.reply({ embeds: [helpEmbed] });
     }

@@ -50,7 +50,6 @@ function authorize(credentials, callback) {
   // Read the token from the file
   fs.readFile(TOKEN_PATH, (err, token) => {
     if (err) return getNewToken(oAuth2Client, callback);  // If no token, get a new one
-    console.log('Token loaded:', token); // Debugging log
     oAuth2Client.setCredentials(JSON.parse(token));  // Set the credentials if token exists
     callback(oAuth2Client);  // Proceed to update the sheet
   });
@@ -140,8 +139,39 @@ function startUpdatingSheet(auth) {
     auditLogData = loadAuditLog(auditLogPath);
     console.log('Loaded audit log data:', auditLogData); // Debugging log
     updateSheet(auth);
-  }, 60000);  // Changed to 10000 milliseconds (10 seconds)
+  }, 60000);  // Every 60 seconds
 }
+
+// Refresh the token when it expires
+function refreshTokenIfNeeded(oAuth2Client) {
+  const token = oAuth2Client.credentials;
+
+  if (token && token.expiry_date <= Date.now()) {
+    console.log("Token has expired, refreshing...");
+    oAuth2Client.refreshAccessToken((err, tokens) => {
+      if (err) {
+        console.log("Error refreshing token", err);
+        return;
+      }
+      oAuth2Client.setCredentials(tokens);
+      fs.writeFile(TOKEN_PATH, JSON.stringify(tokens), (err) => {
+        if (err) return console.log("Error saving new token", err);
+        console.log("Refreshed token saved.");
+      });
+    });
+  }
+}
+
+// Periodically check if the token needs refreshing
+setInterval(() => {
+  const token = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8'));
+  const oAuth2Client = new google.auth.OAuth2();
+  oAuth2Client.setCredentials(token);
+
+  if (token.expiry_date <= Date.now()) {
+    refreshTokenIfNeeded(oAuth2Client);
+  }
+}, 60000);  // Check every minute
 
 // Local server to handle OAuth
 app.listen(port, () => {
