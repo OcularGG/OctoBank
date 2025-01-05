@@ -6,6 +6,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
 require('./SheetsCode.js');
 require('./audit_log_compiler.js')
+const { backupCoins } = require('./backupcoins');
+
+
 
 let coinsData = loadData(path, {});
 let auditLog = loadData(auditLogPath, []);
@@ -23,9 +26,15 @@ function loadData(filePath, defaultData) {
     return defaultData;
 }
 
-function saveData() {
+async function saveData() {
     fs.writeFileSync(path, JSON.stringify(coinsData, null, 2));
     fs.writeFileSync(auditLogPath, JSON.stringify(auditLog, null, 2));
+    try {
+        await backupCoins();
+        console.log('Backup completed successfully.');
+    } catch (error) {
+        console.error('Error during backup:', error);
+    }
 }
 
 function isTeller(interaction) {
