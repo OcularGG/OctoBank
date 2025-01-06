@@ -1,7 +1,5 @@
 const { Client, GatewayIntentBits, EmbedBuilder, SlashCommandBuilder, ActivityType } = require('discord.js');
 const fs = require('fs');
-const path = './coins.json';
-const auditLogPath = './audit_log.json';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
 
@@ -13,7 +11,6 @@ const dbConfig = {
     password: 'e4!=6PqJ+dFyquGs@OczJcVR',
     database: 's159065_OctoBank'
 };
-
 
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
@@ -36,19 +33,15 @@ async function loadData(tableName) {
 // Function to save data to the database
 async function saveData(tableName, data) {
     try {
-        // Ensure data is an array
         if (!Array.isArray(data)) {
             throw new Error('Invalid data format: data must be an array of records.');
         }
 
-        // Iterate over the data and save each record
         for (const record of data) {
-            // Validate that each record has the required fields
             if (!record.username || typeof record.coins === 'undefined') {
                 throw new Error(`Invalid record: ${JSON.stringify(record)} - Each record must have 'username' and 'coins'.`);
             }
 
-            // Execute the query
             await pool.query(
                 `INSERT INTO ${tableName} (username, balance) VALUES (?, ?) 
                  ON DUPLICATE KEY UPDATE balance = ?`,
@@ -62,51 +55,40 @@ async function saveData(tableName, data) {
     }
 }
 
-
-// Define the `saveAuditLog` function to store audit logs
-async function saveAuditLog(action, sender, target, amount) {
-    try {
-        // Format timestamp correctly for the database
-        const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
-        // Execute the query
-        const query = `
-            INSERT INTO AuditLog (action, sender, target, amount, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        `;
-        await pool.query(query, [action, sender, target, amount, timestamp]);
-
-        console.log('Audit log saved successfully.');
-    } catch (error) {
-        // Handle and log error
-        console.error('Error saving audit log:', error);
-
-        // Additional debugging to help pinpoint issues
-        if (error.code) {
-            console.error(`Error code: ${error.code}`);
-        }
-        if (error.sqlMessage) {
-            console.error(`SQL Message: ${error.sqlMessage}`);
-        }
-        if (error.sql) {
-            console.error(`SQL Query: ${error.sql}`);
-        }
-    }
-}
-
-// Load coins data from the database (ensures it's available)
+// Function to load coins data from the database (ensures it's available)
 async function loadCoinsData() {
     const data = await loadData('Coins');
     coinsData = data.reduce((acc, record) => {
         acc[record.username] = record.balance;
         return acc;
-    }, {}); // Create a coinsData object from the rows
+    }, {});
 }
 
 // Initialize coins data when the bot starts
 client.once('ready', async () => {
     await loadCoinsData();  // Load data from DB on bot start
     console.log('Bot is ready!');
+});
+
+// Command handling framework
+client.commands = new Map(); // Initialize a map for commands
+
+// Load commands from the "commands" directory
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    client.commands.set(file.split('.')[0], command);  // Use the file name (without extension) as the key
+}
+
+// Add the interaction handler to execute commands
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isCommand()) return;
+
+    const commandName = interaction.commandName;
+    if (client.commands.has(commandName)) {
+        const command = client.commands.get(commandName);
+        await command(client, interaction, coinsData);  // Pass client, interaction, and coinsData
+    }
 });
 
 // Check if the user is a "Teller" based on their role
@@ -152,22 +134,16 @@ function formatTimestamp(date) {
 
 async function getTotalCoins() {
     try {
-        // Create a connection to the database
         const connection = await mysql.createConnection(dbConfig);
-
-        // Query to calculate the total value of coins
         const [rows] = await connection.execute('SELECT SUM(balance) AS total_coins FROM Coins');
-
-        // Close the connection
         await connection.end();
 
-        // Extract and return the total_coins value
-        const totalCoins = rows[0].total_coins || 0; // Default to 0 if null
+        const totalCoins = rows[0].total_coins || 0;
         console.log(`Total coins: ${totalCoins}`);
         return totalCoins;
     } catch (error) {
         console.error('Error fetching total coins:', error);
-        throw error; // Re-throw the error for further handling if necessary
+        throw error;
     }
 }
 
@@ -179,8 +155,7 @@ async function updateBotStatus() {
         console.error('Error:', err);
     });
     const totalOctogold = Object.values(coinsData).reduce((sum, balance) => sum + balance, 0);
-
-    const formattedTotalOctogold = totalOctogold.toLocaleString();  // Format with commas
+    const formattedTotalOctogold = totalOctogold.toLocaleString();
     console.log('Total Octogold calculated:', formattedTotalOctogold);
 
     try {
@@ -197,11 +172,11 @@ async function updateBotStatus() {
     }
 }
 
-
 // Add event listener to ensure the bot is ready and operational
 client.once('ready', () => {
     console.log(`${client.user.tag} is now online!`);
 });
+
 
 
 client.once('ready', async () => {
@@ -316,74 +291,33 @@ client.on('interactionCreate', async (interaction) => {
 
 
     if (commandName === 'balance') {
-        const targetUser = args.getUser('user') || interaction.user;
-        const balance = coinsData[targetUser.username] || 0;
-        const formattedBalance = balance.toLocaleString();
-
-        const embed = new EmbedBuilder()
-            .setColor('#ffbf00')
-            .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold.`)
-            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() });
-        interaction.reply({ embeds: [embed] });
+        try {
+            const balanceCommand = client.commands.get('balance');
+            await balanceCommand(client, interaction, coinsData);  // Then call the balance command
+        } catch (error) {
+            console.error('Error handling balance command:', error);
+        }
     }
+    
+
 
     if (commandName === 'pay') {
-    if (!isTeller(interaction)) {
-        sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
-        return;
+        try {
+            const payCommand = client.commands.get('pay')
+            console.log('Deferring interaction...');
+            
+            // Check if the user has the "Teller" role
+            if (!isTeller(interaction)) {
+                sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+                return;
+            }
+    
+            // Call the pay command now that the "Teller" check passed
+            await payCommand(client, interaction, coinsData, sendErrorMessage, saveData, saveAuditLog, updateBotStatus);
+        } catch (error) {
+            console.error('Error handling pay command:', error);
+        }
     }
-
-    const targetUser = args.getUser('user');
-    const amount = args.getInteger('amount');
-
-    // Validate input
-    if (!targetUser || isNaN(amount)) {
-        sendErrorMessage(interaction, 'Invalid command usage! Example: `/pay @user 100`');
-        return;
-    }
-
-    const actionType = amount < 0 ? 'withdraw' : 'deposit';
-    const actionLink = actionType === 'withdraw'
-        ? '[**OctoBank Withdrawal**](https://octobank.ocular-gaming.net/)'
-        : '[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)';
-
-    const username = targetUser.username;
-
-    // Defer the reply immediately to prevent timeout issues
-    await interaction.deferReply();
-
-    // Update coinsData and save to database
-    coinsData[username] = (coinsData[username] || 0) + amount;
-
-    try {
-        // Save updated balance to database
-        await saveData('Coins', [{ username, coins: coinsData[username] }]);
-
-        // Log transaction in the audit log
-        await saveAuditLog(actionType, interaction.user.username, username, amount);
-
-        // Prepare response message
-        const formattedAmount = Math.abs(amount).toLocaleString();
-        const actionMessage = actionType === 'withdraw'
-            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from **${username}**'s wallet.`
-            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold to **${username}**'s wallet.`;
-
-        const embed = new EmbedBuilder()
-            .setColor('#ffbf00')
-            .setDescription(`${actionLink}\n\n${actionMessage}`)
-            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
-            .setTimestamp();
-
-        // Send the response after processing
-        await interaction.editReply({ embeds: [embed] });
-
-        // Update bot status
-        await updateBotStatus();
-    } catch (error) {
-        console.error('Error processing pay command:', error);
-        sendErrorMessage(interaction, 'An error occurred while processing the transaction. Please try again later.');
-    }
-}
 
 
 
@@ -837,7 +771,6 @@ client.on('interactionCreate', async (interaction) => {
             `**/balance**: Check your current OctoGold balance\n` +
             `**/pay**: Pay or withdraw OctoGold to a user (Teller only)\n` +
             `**/masspay**: Pay or withdraw OctoGold to multiple users (Teller only)\n` +
-            `**/audit**: View the transaction audit log (Teller only)\n` +
             `**/buy**: Spend OctoGold in the guild market (Teller only)\n` +
             `**/payout**: Pay out OctoGold to a user (Teller only)\n` +
             `**/lootsplit**: Lootsplit calculator`
@@ -847,5 +780,5 @@ client.on('interactionCreate', async (interaction) => {
 
 });
 
-client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GxVrxA.WjoApui9d9bi0iB5HJJaB8ewVBwWNPQZjpTkxc');
+client.login('MTMyNTU0OTAyMDM1Mjg3NjY0NQ.G6v1IW.h5wWEbcWaRTipcvZAOKQc8hCWWVzC77KdbGsL4');
 
