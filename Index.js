@@ -328,58 +328,62 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (commandName === 'pay') {
-        if (!isTeller(interaction)) {
-            sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
-            return;
-        }
-
-        const targetUser = args.getUser('user');
-        const amount = args.getInteger('amount');
-
-        // Validate input
-        if (!targetUser || isNaN(amount)) {
-            sendErrorMessage(interaction, 'Invalid command usage! Example: `/pay @user 100`');
-            return;
-        }
-
-        const actionType = amount < 0 ? 'withdraw' : 'deposit';
-        const actionLink = actionType === 'withdraw'
-            ? '[**OctoBank Withdrawal**](https://octobank.ocular-gaming.net/)'
-            : '[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)';
-
-        const username = targetUser.username;
-
-        // Update coinsData and save to database
-        coinsData[username] = (coinsData[username] || 0) + amount;
-
-        try {
-            // Save updated balance to database
-            await saveData('Coins', [{ username, coins: coinsData[username] }]);
-
-            // Log transaction in the audit log
-            await saveAuditLog(actionType, interaction.user.username, username, amount);
-
-            // Prepare response message
-            const formattedAmount = Math.abs(amount).toLocaleString();
-            const actionMessage = actionType === 'withdraw'
-                ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from **${username}**'s wallet.`
-                : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold to **${username}**'s wallet.`;
-
-            const embed = new EmbedBuilder()
-                .setColor('#ffbf00')
-                .setDescription(`${actionLink}\n\n${actionMessage}`)
-                .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
-                .setTimestamp();
-
-            interaction.reply({ embeds: [embed] });
-
-            // Update bot status
-            await updateBotStatus();
-        } catch (error) {
-            console.error('Error processing pay command:', error);
-            sendErrorMessage(interaction, 'An error occurred while processing the transaction. Please try again later.');
-        }
+    if (!isTeller(interaction)) {
+        sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+        return;
     }
+
+    const targetUser = args.getUser('user');
+    const amount = args.getInteger('amount');
+
+    // Validate input
+    if (!targetUser || isNaN(amount)) {
+        sendErrorMessage(interaction, 'Invalid command usage! Example: `/pay @user 100`');
+        return;
+    }
+
+    const actionType = amount < 0 ? 'withdraw' : 'deposit';
+    const actionLink = actionType === 'withdraw'
+        ? '[**OctoBank Withdrawal**](https://octobank.ocular-gaming.net/)'
+        : '[**OctoBank Deposit**](https://octobank.ocular-gaming.net/)';
+
+    const username = targetUser.username;
+
+    // Defer the reply immediately to prevent timeout issues
+    await interaction.deferReply();
+
+    // Update coinsData and save to database
+    coinsData[username] = (coinsData[username] || 0) + amount;
+
+    try {
+        // Save updated balance to database
+        await saveData('Coins', [{ username, coins: coinsData[username] }]);
+
+        // Log transaction in the audit log
+        await saveAuditLog(actionType, interaction.user.username, username, amount);
+
+        // Prepare response message
+        const formattedAmount = Math.abs(amount).toLocaleString();
+        const actionMessage = actionType === 'withdraw'
+            ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from **${username}**'s wallet.`
+            : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold to **${username}**'s wallet.`;
+
+        const embed = new EmbedBuilder()
+            .setColor('#ffbf00')
+            .setDescription(`${actionLink}\n\n${actionMessage}`)
+            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+            .setTimestamp();
+
+        // Send the response after processing
+        await interaction.editReply({ embeds: [embed] });
+
+        // Update bot status
+        await updateBotStatus();
+    } catch (error) {
+        console.error('Error processing pay command:', error);
+        sendErrorMessage(interaction, 'An error occurred while processing the transaction. Please try again later.');
+    }
+}
 
 
 
