@@ -696,104 +696,134 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    if (commandName === 'lootsplit') {
-        if (!isTeller(interaction)) {
-            return sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+if (commandName === 'lootsplit') {
+    if (!isTeller(interaction)) {
+        return sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
+    }
+
+    await interaction.deferReply(); // Defer the interaction to prevent expiration
+
+    const amount = args.getInteger('amount'); // Total loot amount
+    const repairCost = args.getInteger('repaircost'); // Repair cost to subtract
+    const userInput = args.getString('users'); // Users to split the loot with (as a string)
+
+    // Validate inputs
+    if (isNaN(amount) || isNaN(repairCost) || amount <= 0 || repairCost < 0) {
+        return interaction.editReply('Invalid command usage! Example: `/lootsplit 100 10 @user1 @user2 @user3`');
+    }
+
+    // Calculate the remaining loot after subtracting repair cost
+    const remainingLoot = amount - repairCost;
+    if (remainingLoot <= 0) {
+        return interaction.editReply('The loot after subtracting the repair cost must be greater than 0.');
+    }
+
+    // Calculate the bot's 20% share (rounded down)
+    const botShare = Math.floor(remainingLoot * 0.2);
+    const userShare = remainingLoot - botShare;
+
+    // Parse the userInput string into an array of users
+    const mentionedUsers = userInput.match(/<@!?(\d+)>/g)?.map((mention) => mention.replace(/[<@!>]/g, '')) || [];
+
+    if (mentionedUsers.length === 0) {
+        return interaction.editReply('No valid users mentioned to split the loot with!');
+    }
+
+    // Calculate how much each user gets (rounded down)
+    const individualShare = Math.floor(userShare / mentionedUsers.length);
+
+    let userDetails = ""; // Store user split details
+    const userUpdates = [];
+    const auditLogs = [];
+
+    for (const userId of mentionedUsers) {
+        const targetUser = await interaction.guild.members.fetch(userId);
+        if (!targetUser) continue;
+
+        const username = targetUser.user.username;
+        coinsData[username] = coinsData[username] || 0;
+        coinsData[username] += individualShare;
+
+        userUpdates.push({ username, coins: coinsData[username] });
+        auditLogs.push({ action: 'lootsplit', sender: interaction.user.username, target: username, amount: individualShare });
+
+        const balanceTotal = coinsData[username].toLocaleString();
+        userDetails += `- **${username}** received <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold, and now has <:OctoGold:1324817815470870609> **${balanceTotal}** OctoGold\n`;
+    }
+
+    coinsData['OctoBank'] = coinsData['OctoBank'] || 0;
+    coinsData['OctoBank'] += botShare;
+
+    userUpdates.push({ username: 'OctoBank', coins: coinsData['OctoBank'] });
+    auditLogs.push({ action: 'lootsplit', sender: interaction.user.username, target: 'OctoBank', amount: botShare });
+
+    try {
+        await saveData('Coins', userUpdates);
+        for (const log of auditLogs) {
+            await saveAuditLog(log.action, log.sender, log.target, log.amount);
         }
-    
-        await interaction.deferReply(); // Defer the interaction to prevent expiration
-    
-        const amount = args.getInteger('amount'); // Total loot amount
-        const repairCost = args.getInteger('repaircost'); // Repair cost to subtract
-        const userInput = args.getString('users'); // Users to split the loot with (as a string)
-    
-        // Validate inputs
-        if (isNaN(amount) || isNaN(repairCost) || amount <= 0 || repairCost < 0) {
-            return interaction.editReply('Invalid command usage! Example: `/lootsplit 100 10 @user1 @user2 @user3`');
-        }
-    
-        // Calculate the remaining loot after subtracting repair cost
-        const remainingLoot = amount - repairCost;
-        if (remainingLoot <= 0) {
-            return interaction.editReply('The loot after subtracting the repair cost must be greater than 0.');
-        }
-    
-        // Calculate the bot's 20% share (rounded down)
-        const botShare = Math.floor(remainingLoot * 0.2);
-        const userShare = remainingLoot - botShare;
-    
-        // Parse the userInput string into an array of users
-        const mentionedUsers = userInput.match(/<@!?(\d+)>/g)?.map((mention) => mention.replace(/[<@!>]/g, '')) || [];
-    
-        if (mentionedUsers.length === 0) {
-            return interaction.editReply('No valid users mentioned to split the loot with!');
-        }
-    
-        // Calculate how much each user gets (rounded down)
-        const individualShare = Math.floor(userShare / mentionedUsers.length);
-    
-        let userDetails = ""; // Store user split details
-        const userUpdates = [];
-        const auditLogs = [];
-    
-        for (const userId of mentionedUsers) {
-            const targetUser = await interaction.guild.members.fetch(userId);
-            if (!targetUser) continue;
-    
-            const username = targetUser.user.username;
-            coinsData[username] = coinsData[username] || 0;
-            coinsData[username] += individualShare;
-    
-            userUpdates.push({ username, coins: coinsData[username] });
-            auditLogs.push({ action: 'lootsplit', sender: interaction.user.username, target: username, amount: individualShare });
-    
-            const balanceTotal = coinsData[username].toLocaleString();
-            userDetails += `- **${username}** received <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold, and now has <:OctoGold:1324817815470870609> **${balanceTotal}** OctoGold\n`;
-        }
-    
-        coinsData['OctoBank'] = coinsData['OctoBank'] || 0;
-        coinsData['OctoBank'] += botShare;
-    
-        userUpdates.push({ username: 'OctoBank', coins: coinsData['OctoBank'] });
-        auditLogs.push({ action: 'lootsplit', sender: interaction.user.username, target: 'OctoBank', amount: botShare });
-    
-        try {
-            await saveData('Coins', userUpdates);
-            for (const log of auditLogs) {
-                await saveAuditLog(log.action, log.sender, log.target, log.amount);
-            }
-        } catch (error) {
-            console.error('Error saving loot split data:', error);
-            return interaction.editReply('An error occurred while processing the loot split.');
-        }
-    
-        const formattedAmount = amount.toLocaleString();
-        const formattedRepairCost = repairCost.toLocaleString();
-        const formattedBotShare = botShare.toLocaleString();
-        const formattedRemainingLoot = userShare.toLocaleString();
-        const individualShareFormatted = individualShare.toLocaleString();
-    
-        const actionMessage = `
-            **Loot Split**
-            <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold is being split.\n
-            __**Repair:**__ <:OctoGold:1324817815470870609> **${formattedRepairCost}** OctoGold
-            __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${formattedBotShare}** OctoGold
-            __**Being Split:**__ <:OctoGold:1324817815470870609> **${formattedRemainingLoot}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShareFormatted}** OctoGold.\n
-            **Share Details:**
-            ${userDetails}
-        `;
-    
-        const embed = new EmbedBuilder()
+    } catch (error) {
+        console.error('Error saving loot split data:', error);
+        return interaction.editReply('An error occurred while processing the loot split.');
+    }
+
+    const formattedAmount = amount.toLocaleString();
+    const formattedRepairCost = repairCost.toLocaleString();
+    const formattedBotShare = botShare.toLocaleString();
+    const formattedRemainingLoot = userShare.toLocaleString();
+    const individualShareFormatted = individualShare.toLocaleString();
+
+    const actionMessage = `
+        **Loot Split**
+        <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold is being split.\n
+        __**Repair:**__ <:OctoGold:1324817815470870609> **${formattedRepairCost}** OctoGold
+        __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${formattedBotShare}** OctoGold
+        __**Being Split:**__ <:OctoGold:1324817815470870609> **${formattedRemainingLoot}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShareFormatted}** OctoGold.
+    `;
+
+    // Maximum embed description size (Discord limit)
+    const MAX_EMBED_SIZE = 4096;
+
+    const embeds = [];
+    let currentEmbedContent = actionMessage + '\n' + userDetails;
+
+    // Split content into multiple embeds if necessary, ensuring no splitting mid-line
+    while (currentEmbedContent.length > MAX_EMBED_SIZE) {
+        // Find the last line break within the embed content to split at
+        const lastLineBreak = currentEmbedContent.lastIndexOf('\n', MAX_EMBED_SIZE);
+
+        // If a valid line break is found, split at that position, otherwise split at the max length
+        const splitPoint = lastLineBreak === -1 ? MAX_EMBED_SIZE : lastLineBreak;
+
+        const embedContent = currentEmbedContent.slice(0, splitPoint);
+        embeds.push(new EmbedBuilder()
             .setColor('#ffbf00')
-            .setDescription(actionMessage)
+            .setDescription(embedContent)
             .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
             .setTimestamp()
-            .setFooter({ text: `Transaction processed by ${interaction.user.username}` });
-    
-        interaction.editReply({ embeds: [embed] });
-    
-        await updateBotStatus();
+            .setFooter({ text: `Transaction processed by ${interaction.user.username}` })
+        );
+        
+        // Reduce the content by removing what we've already added to an embed
+        currentEmbedContent = currentEmbedContent.slice(splitPoint).trim();
     }
+
+    // Add the remaining content as the final embed
+    if (currentEmbedContent.length > 0) {
+        embeds.push(new EmbedBuilder()
+            .setColor('#ffbf00')
+            .setDescription(currentEmbedContent)
+            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+            .setTimestamp()
+            .setFooter({ text: `Transaction processed by ${interaction.user.username}` })
+        );
+    }
+
+    // Send all the embeds at once
+    await interaction.followUp({ embeds });
+    await updateBotStatus();
+}
+
     
 
 
@@ -814,4 +844,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 });
-client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GOc63x.ZUYK4liah20puTginEMJOBG_Li8EUvkOJu4JVk');
+client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GxVrxA.WjoApui9d9bi0iB5HJJaB8ewVBwWNPQZjpTkxc');
