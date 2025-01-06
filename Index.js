@@ -782,23 +782,51 @@ client.on('interactionCreate', async (interaction) => {
             <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold is being split.\n
             __**Repair:**__ <:OctoGold:1324817815470870609> **${formattedRepairCost}** OctoGold
             __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${formattedBotShare}** OctoGold
-            __**Being Split:**__ <:OctoGold:1324817815470870609> **${formattedRemainingLoot}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShareFormatted}** OctoGold.\n
-            **Share Details:**
-            ${userDetails}
+            __**Being Split:**__ <:OctoGold:1324817815470870609> **${formattedRemainingLoot}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShareFormatted}** OctoGold.
         `;
     
-        const embed = new EmbedBuilder()
-            .setColor('#ffbf00')
-            .setDescription(actionMessage)
-            .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
-            .setTimestamp()
-            .setFooter({ text: `Transaction processed by ${interaction.user.username}` });
+        // Maximum embed description size (Discord limit)
+        const MAX_EMBED_SIZE = 4096;
     
-        interaction.editReply({ embeds: [embed] });
+        const embeds = [];
+        let currentEmbedContent = actionMessage + '\n' + userDetails;
     
+        // Split content into multiple embeds if necessary, ensuring no splitting mid-line
+        while (currentEmbedContent.length > MAX_EMBED_SIZE) {
+            // Find the last line break within the embed content to split at
+            const lastLineBreak = currentEmbedContent.lastIndexOf('\n', MAX_EMBED_SIZE);
+    
+            // If a valid line break is found, split at that position, otherwise split at the max length
+            const splitPoint = lastLineBreak === -1 ? MAX_EMBED_SIZE : lastLineBreak;
+    
+            const embedContent = currentEmbedContent.slice(0, splitPoint);
+            embeds.push(new EmbedBuilder()
+                .setColor('#ffbf00')
+                .setDescription(embedContent)
+                .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+                .setTimestamp()
+                .setFooter({ text: `Transaction processed by ${interaction.user.username}` })
+            );
+            
+            // Reduce the content by removing what we've already added to an embed
+            currentEmbedContent = currentEmbedContent.slice(splitPoint).trim();
+        }
+    
+        // Add the remaining content as the final embed
+        if (currentEmbedContent.length > 0) {
+            embeds.push(new EmbedBuilder()
+                .setColor('#ffbf00')
+                .setDescription(currentEmbedContent)
+                .setAuthor({ name: client.user.username, iconURL: client.user.displayAvatarURL() })
+                .setTimestamp()
+                .setFooter({ text: `Transaction processed by ${interaction.user.username}` })
+            );
+        }
+    
+        // Send all the embeds at once
+        await interaction.followUp({ embeds });
         await updateBotStatus();
     }
-    
 
 
 
@@ -818,4 +846,6 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 });
+
 client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GxVrxA.WjoApui9d9bi0iB5HJJaB8ewVBwWNPQZjpTkxc');
+
