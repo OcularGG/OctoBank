@@ -502,39 +502,40 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 
-
     if (commandName === 'masspay') {
         if (!isTeller(interaction)) {
             sendErrorMessage(interaction, 'You do not have permission to use this command. Only users with the "Teller" role can use it.');
             return;
         }
-
+    
+        await interaction.deferReply();
+    
         const amount = args.getInteger('amount');
         const userInput = args.getString('users');
-
+    
         // Validate input
         if (isNaN(amount) || amount === 0 || !userInput) {
-            sendErrorMessage(interaction, 'Invalid command usage! Example: `/masspay 100 @user1 @user2 @user3`');
+            await interaction.editReply({ content: 'Invalid command usage! Example: `/masspay 100 @user1 @user2 @user3`' });
             return;
         }
-
+    
         const mentionRegex = /<@!?(\d+)>/g;
         const mentionedUserIds = [];
         let match;
         while ((match = mentionRegex.exec(userInput)) !== null) {
             mentionedUserIds.push(match[1]);
         }
-
+    
         if (mentionedUserIds.length === 0) {
-            sendErrorMessage(interaction, 'No valid user mentions found! Example: `/masspay 100 @user1 @user2 @user3`');
+            await interaction.editReply({ content: 'No valid user mentions found! Example: `/masspay 100 @user1 @user2 @user3`' });
             return;
         }
-
+    
         let usersList = [];
         const transactions = [];
         const failedUsers = [];
         const actionType = amount < 0 ? 'withdraw' : 'deposit';
-
+    
         try {
             for (const userId of mentionedUserIds) {
                 const targetUser = await interaction.guild.members.fetch(userId).catch(() => null);
@@ -542,13 +543,13 @@ client.on('interactionCreate', async (interaction) => {
                     const username = targetUser.user.username;
                     coinsData[username] = coinsData[username] || 0;
                     coinsData[username] += amount;
-
+    
                     // Save the transaction for database update
                     transactions.push({
                         username,
                         coins: coinsData[username],
                     });
-
+    
                     // Log the transaction for audit log
                     await saveAuditLog(
                         actionType === 'withdraw' ? 'masswithdraw' : 'masspay',
@@ -556,43 +557,44 @@ client.on('interactionCreate', async (interaction) => {
                         username,
                         amount
                     );
-
+    
                     usersList.push(`**${username}**`);
                 } else {
                     failedUsers.push(userId); // Track failed users
                 }
             }
-
+    
             // Save all transactions to the database
             if (transactions.length > 0) {
                 await saveData('Coins', transactions);
             }
-
+    
             const formattedAmount = Math.abs(amount).toLocaleString();
             let actionMessage = actionType === 'withdraw'
                 ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n${usersList.join('\n')}`
                 : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n${usersList.join('\n')}`;
-
+    
             if (failedUsers.length > 0) {
                 actionMessage += `\n\n⚠️ Could not process transactions for the following users:\n${failedUsers
                     .map((id) => `<@${id}>`)
                     .join('\n')}`;
             }
-
+    
             const actionText = actionType === 'withdraw'
                 ? '[**Octobank Mass Withdrawal**](https://octobank.ocular-gaming.net/)'
                 : '[**Octobank Mass Deposit**](https://octobank.ocular-gaming.net/)';
-
+    
             const embed = createEmbed('Mass Transaction Successful', `${actionText}\n\n${actionMessage}`);
             embed.setTimestamp(); // This automatically sets the timestamp
-
-            interaction.reply({ embeds: [embed] });
+    
+            await interaction.editReply({ embeds: [embed] });
             await updateBotStatus();
         } catch (error) {
             console.error('Error processing masspay:', error);
-            sendErrorMessage(interaction, 'An error occurred while processing the mass payment. Please try again later.');
+            await interaction.editReply({ content: 'An error occurred while processing the mass payment. Please try again later.' });
         }
     }
+    
 
 
 
@@ -812,4 +814,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 });
-client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GOc63x.ZUYK4liah20puTginEMJOBG_Li8EUvkOJu4JVk');
+client.login('MTMyNTU0OTAyMDM1Mjg3NjY0NQ.G6v1IW.h5wWEbcWaRTipcvZAOKQc8hCWWVzC77KdbGsL4');
