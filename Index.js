@@ -1,6 +1,7 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const db = require('./db'); // Assuming your DB connection file is named 'db.js'
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -20,8 +21,41 @@ for (const file of commandFiles) {
     commands.push(command);  // Push the entire command object, not just the data
 }
 
+// Function to update the bot's status with the total balance
+async function updateBotStatus() {
+    try {
+        // Query to get the total balance of all users
+        const [rows] = await db.query('SELECT SUM(balance) AS totalBalance FROM coins');
+
+        if (rows.length > 0 && rows[0].totalBalance !== null) {
+            const totalBalance = rows[0].totalBalance;
+
+            // Format the total balance to make it more readable (e.g., with commas)
+            const formattedTotalOctogold = totalBalance.toLocaleString();
+
+            // Set the bot's presence (status message) to show the total balance
+            await client.user.setPresence({
+                status: 'online',
+                activities: [{
+                    name: `${formattedTotalOctogold} OctoGold`, // Display the formatted total balance
+                    type: ActivityType.Watching // Type of activity being displayed
+                }]
+            });
+
+            console.log('Bot status updated successfully.');
+        } else {
+            console.error('Failed to fetch total balance from database.');
+        }
+    } catch (error) {
+        console.error('Error setting bot presence:', error);
+    }
+}
+
 client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
+
+    // Update the bot's status with the total balance
+    await updateBotStatus();
 
     try {
         const guildId = '1097537634756214957'; // Replace this with the ID of the server you want to register commands in
@@ -107,5 +141,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-
-client.login('MTMyNTU0OTAyMDM1Mjg3NjY0NQ.G6v1IW.h5wWEbcWaRTipcvZAOKQc8hCWWVzC77KdbGsL4');
+client.login('MTMyNTU0OTAyMDM1Mjg3NjY0NQ.G6v1IW.h5wWEbcWaRTipcvZAOKQc8hCWWVzC77KdbGsL4'); // Replace with your actual bot token
