@@ -15,6 +15,9 @@ module.exports = {
             // Determine the target user (either mentioned user or the sender if no user is mentioned)
             const targetUser = interaction.options.getUser('user') || interaction.user;  // Default to the command caller if no user is mentioned
 
+            // Acknowledge the interaction if it takes time to process
+            await interaction.deferReply();
+
             // Check if user exists in the database using the username as the key
             const [rows] = await db.query('SELECT balance FROM coins WHERE username = ?', [targetUser.username]);
 
@@ -27,12 +30,10 @@ module.exports = {
                     .setColor('#ffbf00')
                     .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}**, your current balance is <:OctoGold:1324817815470870609> **0** OctoGold.`)
                     .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                    setFooter({ text: ` Balance requested by ${interaction.user.username}`, 
-                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
-                    })
+                    .setFooter({ text: `Balance requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
                     .setTimestamp();
 
-                return interaction.reply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
+                return interaction.editReply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
             }
 
             // If user exists, send their balance in an embed
@@ -44,15 +45,13 @@ module.exports = {
                 .setColor('#ffbf00')
                 .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold.`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: ` Balance requested by ${interaction.user.username}`, 
-                    iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
-                })
+                .setFooter({ text: `Balance requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
-            return interaction.reply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
+            return interaction.editReply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
         } catch (error) {
             console.error(error);
-            return interaction.reply({
+            return interaction.editReply({
                 content: 'There was an error fetching the balance.',
                 flags: 64,  // Using flags for ephemeral responses
             });
