@@ -146,4 +146,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-client.login('MTMyNTU0OTAyMDM1Mjg3NjY0NQ.G6v1IW.h5wWEbcWaRTipcvZAOKQc8hCWWVzC77KdbGsL4'); // Replace with your actual bot token
+client.login('MTMyNDQzMDIzMTEyOTQyODA4OA.GxVrxA.WjoApui9d9bi0iB5HJJaB8ewVBwWNPQZjpTkxc'); // Replace with your actual bot token
