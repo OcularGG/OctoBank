@@ -28,7 +28,10 @@ async function updateBotStatus() {
         const [rows] = await db.query('SELECT SUM(balance) AS totalBalance FROM coins');
 
         if (rows.length > 0 && rows[0].totalBalance !== null) {
-            const totalBalance = rows[0].totalBalance;
+            let totalBalance = rows[0].totalBalance;
+
+            // Ensure totalBalance is a valid number (this also works if it's a BIGINT)
+            totalBalance = Number(totalBalance);
 
             // Format the total balance to make it more readable (e.g., with commas)
             const formattedTotalOctogold = totalBalance.toLocaleString();
@@ -50,6 +53,7 @@ async function updateBotStatus() {
         console.error('Error setting bot presence:', error);
     }
 }
+
 
 
 client.on('ready', async () => {
