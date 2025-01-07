@@ -59,7 +59,7 @@ module.exports = {
                 // Create the embed field for the user
                 embedFields.push({
                     name: target,
-                    value: `**Action**: Reverted <:OctoGold:1324817815470870609> ${Math.abs(amount).toLocaleString()}\n OctoGold` +
+                    value: `**Action**: Reverted <:OctoGold:1324817815470870609> ${Math.abs(amount).toLocaleString()} OctoGold\n` +
                            `**New Balance**: <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()} OctoGold`
                 });
             }
