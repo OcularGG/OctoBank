@@ -114,8 +114,8 @@ module.exports = {
             }
 
             const actionText = actionType === 'withdraw'
-                ? '[**Octobank Mass Withdrawal**](https://octobank.ocular-gaming.net/)'
-                : '[**Octobank Mass Deposit**](https://octobank.ocular-gaming.net/)';
+                ? '[**Octobank**](https://octobank.ocular-gaming.net/)'
+                : '[**Octobank**](https://octobank.ocular-gaming.net/)';
 
             // Create the embed with the updated information
             const embed = new EmbedBuilder()
@@ -123,7 +123,7 @@ module.exports = {
                 .setTitle('Mass Transaction Successful')
                 .setDescription(`${actionText}\n\n${actionMessage}`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `Command ID: ${parsedCallbackId}` }) // Add the parsed callback ID at the bottom of the embed
+                .setFooter({ text: `Callback ID: ${parsedCallbackId}` }) // Add the parsed callback ID at the bottom of the embed
                 .setTimestamp();
 
             // Send the embed as a reply

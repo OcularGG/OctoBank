@@ -51,6 +51,7 @@ async function updateBotStatus() {
     }
 }
 
+
 client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
 
@@ -135,6 +136,10 @@ client.on('interactionCreate', async (interaction) => {
 
     try {
         await command.execute(interaction);  // Execute the command
+
+        // After command execution, update the bot's status with the total balance
+        await updateBotStatus();  // This ensures the bot's status is updated after every command
+
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });

@@ -1,10 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-function createHelpEmbed(title, description) {
+function createHelpEmbed(description, bot) {
     return new EmbedBuilder()
         .setColor('#ffbf00')
-        .setTitle(title)
-        .setDescription(description)
+        .setDescription(description)  // Only set the description
+        .setAuthor({
+            name: bot.user.username,  // Bot's name
+            iconURL: bot.user.displayAvatarURL(),  // Bot's avatar
+        })
         .setTimestamp();
 }
 
@@ -21,12 +24,9 @@ module.exports = {
                             `**/buy**: Spend OctoGold in the guild market (Teller only)\n` +
                             `**/payout**: Pay out OctoGold to a user (Teller only)\n` +
                             `**/lootsplit**: Lootsplit calculator`;
-        const helpEmbed = createHelpEmbed(
-            'Octobank Command Help',
-            `Here are the available commands:\n\n` +
-            `${generalHelp}\n\n` +
-            `---\n\n`
-        );
+
+        // Create the embed with no title, just description, and include the bot's name and avatar
+        const helpEmbed = createHelpEmbed(generalHelp, interaction.client);
 
         // Send the help embed with all command info
         interaction.reply({ embeds: [helpEmbed] });

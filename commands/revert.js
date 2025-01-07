@@ -32,11 +32,14 @@ module.exports = {
         const callbackId = interaction.options.getInteger('callback_id');
 
         try {
+            // Defer the reply to allow time for the processing of the revert action
+            await interaction.deferReply();
+
             // Query the audit log to find all actions by callbackId
             const [rows] = await db.query('SELECT * FROM auditlog WHERE callback = ?', [callbackId]);
 
             if (rows.length === 0) {
-                return interaction.reply({ content: `No actions found with callback ID: ${callbackId}`, ephemeral: true });
+                return interaction.followUp({ content: `No actions found with callback ID: ${callbackId}`, ephemeral: true });
             }
 
             // Revert the balances for all affected users and prepare embed data
@@ -56,7 +59,7 @@ module.exports = {
                 // Create the embed field for the user
                 embedFields.push({
                     name: target,
-                    value: `**Action**: Reverted ${Math.abs(amount)}\n` +
+                    value: `**Action**: Reverted ${Math.abs(amount).toLocaleString()}\n` +
                            `**New Balance**: <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()}`
                 });
             }
@@ -70,11 +73,11 @@ module.exports = {
                 .setFooter({ text: `Reversion processed by ${interaction.user.username}` })
                 .setTimestamp();
 
-            return interaction.reply({ embeds: [successEmbed] });
+            return interaction.followUp({ embeds: [successEmbed] });
 
         } catch (error) {
             console.error('Error processing revert:', error);
-            return interaction.reply({
+            return interaction.followUp({
                 content: 'An error occurred while trying to revert the actions. Please try again later.',
                 ephemeral: true
             });
