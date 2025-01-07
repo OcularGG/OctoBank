@@ -30,7 +30,7 @@ module.exports = {
 
     async execute(interaction) {
         // Acknowledge the interaction and defer the reply to prevent timeout
-        await interaction.deferReply({ flags: 64 }); // Use flags for ephemeral replies
+        await interaction.deferReply(); // Use flags for ephemeral replies
 
         // Check if the user has the 'Teller' role
         if (!interaction.member.roles.cache.some(role => role.name === 'Teller')) {

@@ -32,7 +32,7 @@ module.exports = {
 
     async execute(interaction) {
         // Acknowledge the interaction and defer the reply to prevent timeout
-        await interaction.deferReply({ flags: 64 }); // Ephemeral and prevents timeout
+        await interaction.deferReply(); // Defers the reply to prevent timeout
 
         const amount = interaction.options.getInteger('amount');
         const userInput = interaction.options.getString('users');
@@ -103,8 +103,8 @@ module.exports = {
             const actionType = amount < 0 ? 'withdraw' : 'deposit';
             const formattedAmount = Math.abs(amount).toLocaleString();
             let actionMessage = actionType === 'withdraw'
-                ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n${usersList.join('\n')}`
-                : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n${usersList.join('\n')}`;
+                ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n\n**${usersList.join('\n')}**`
+                : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n\n**${usersList.join('\n')}**`;
 
             // Add failed users to the message if any
             if (failedUsers.length > 0) {
@@ -123,11 +123,15 @@ module.exports = {
                 .setTitle('Mass Transaction Successful')
                 .setDescription(`${actionText}\n\n${actionMessage}`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `Callback ID: ${parsedCallbackId}` }) // Add the parsed callback ID at the bottom of the embed
+                .setFooter({ text: `ID: ${parsedCallbackId} | Transaction processed by ${interaction.user.username}`, 
+                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
+                    })
                 .setTimestamp();
 
-            // Send the embed as a reply
-            return interaction.editReply({ embeds: [embed] });
+            // Send the embed to the channel (everyone can see it)
+            await interaction.editReply({ embeds: [embed] });
+
+        
 
         } catch (error) {
             console.error(error);

@@ -120,13 +120,12 @@ module.exports = {
 
             // Constructing the embed content
             const embedContent = `
-**OctoBank**
-Loot Split
+**Loot Split**
 <:OctoGold:1324817815470870609> **${amount}** OctoGold is being split.
 
-__**Repair:**__ <:OctoGold:1324817815470870609> **${repairCost}** OctoGold
-__**Guild Tax:**__ <:OctoGold:1324817815470870609> **${botShare}** OctoGold
-__**Being Split:**__ <:OctoGold:1324817815470870609> **${remainingLoot}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare}** OctoGold.
+__**Repair:**__ <:OctoGold:1324817815470870609> **${repairCost.toLocaleString()}** OctoGold
+__**Guild Tax:**__ <:OctoGold:1324817815470870609> **${botShare.toLocaleString()}** OctoGold
+__**Being Split:**__ <:OctoGold:1324817815470870609> **${remainingLoot.toLocaleString()}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold.
 
 ${userDetails}
 `;
@@ -147,7 +146,10 @@ ${userDetails}
                     .setColor('#ffbf00')
                     .setDescription(embedContentSlice)
                     .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                    .setFooter({ text: `**Callback ID:** ${callbackId} | Transaction processed by ${interaction.user.username}` })
+                    .setFooter({ 
+                        text: `ID: ${callbackId} | Transaction processed by ${interaction.user.username}`, 
+                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
+                    })
                     .setTimestamp()
                 );
 
@@ -159,11 +161,18 @@ ${userDetails}
                 embeds.push(new EmbedBuilder()
                     .setColor('#ffbf00')
                     .setDescription(currentEmbedContent)
-                    .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                    .setFooter({ text:  `**Callback ID:** ${callbackId} | Transaction processed by ${interaction.user.username}` })
+                    .setAuthor({ 
+                        name: interaction.client.user.username, 
+                        iconURL: interaction.client.user.displayAvatarURL() 
+                    })
+                    .setFooter({ 
+                        text: `ID: ${callbackId} | Transaction processed by ${interaction.user.username}`, 
+                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
+                    })
                     .setTimestamp()
                 );
             }
+            
 
             // Send all the embeds at once
             await interaction.editReply({ embeds }); // This will make the reply visible to everyone

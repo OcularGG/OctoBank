@@ -27,6 +27,9 @@ module.exports = {
                     .setColor('#ffbf00')
                     .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}**, your current balance is <:OctoGold:1324817815470870609> **0** OctoGold.`)
                     .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
+                    setFooter({ text: ` Balance requested by ${interaction.user.username}`, 
+                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
+                    })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
@@ -41,6 +44,9 @@ module.exports = {
                 .setColor('#ffbf00')
                 .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold.`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
+                .setFooter({ text: ` Balance requested by ${interaction.user.username}`, 
+                    iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
+                })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses

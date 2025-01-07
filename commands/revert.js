@@ -59,8 +59,8 @@ module.exports = {
                 // Create the embed field for the user
                 embedFields.push({
                     name: target,
-                    value: `**Action**: Reverted ${Math.abs(amount).toLocaleString()}\n` +
-                           `**New Balance**: <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()}`
+                    value: `**Action**: Reverted <:OctoGold:1324817815470870609> ${Math.abs(amount).toLocaleString()}\n OctoGold` +
+                           `**New Balance**: <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()} OctoGold`
                 });
             }
 
@@ -70,7 +70,8 @@ module.exports = {
                 .setDescription(`The actions with callback ID: **${callbackId}** have been successfully reverted.`)
                 .addFields(...embedFields)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `Reversion processed by ${interaction.user.username}` })
+                .setFooter({ text: `Reversion processed by ${interaction.user.username}`, 
+                    iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
             return interaction.followUp({ embeds: [successEmbed] });

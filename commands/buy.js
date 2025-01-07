@@ -31,7 +31,7 @@ module.exports = {
 
     async execute(interaction) {
         // Acknowledge the interaction and defer the reply to prevent timeout
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const sender = interaction.user;
         const targetUser = interaction.options.getUser('user');
@@ -80,7 +80,7 @@ module.exports = {
             await interaction.editReply({
                 embeds: [warningEmbed],
                 components: [row],
-                ephemeral: true,
+                ephemeral: false,
             });
 
             // Collect user response (Yes/No)
@@ -142,7 +142,8 @@ module.exports = {
                 .setColor('#ffbf00')
                 .setDescription(`**${targetUsername}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `Transaction completed by ${sender.username} | Callback ID: ${callbackId}` }); 
+                .setFooter({ text: `ID: ${callbackId} | Transaction completed by ${sender.username} `,
+                    iconURL: interaction.user.displayAvatarURL() }); 
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {

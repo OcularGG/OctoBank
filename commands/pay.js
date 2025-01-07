@@ -32,7 +32,7 @@ module.exports = {
 
     async execute(interaction) {
         // Acknowledge the interaction and defer the reply to prevent timeout
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const sender = interaction.user;
         const recipient = interaction.options.getUser('user');
@@ -96,11 +96,14 @@ module.exports = {
 
             // Create the embed
             const embed = new EmbedBuilder()
-                .setColor('#ffbf00') // Gold color
-                .setDescription(`${actionLink}\n\n${actionMessage}`)
-                .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `Command ID: ${callbackId} | Processed by: ${interaction.user.username}`})  // Add the callback ID to the footer
-                .setTimestamp();
+    .setColor('#ffbf00') // Gold color
+    .setDescription(`${actionLink}\n\n${actionMessage}`)
+    .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
+    .setFooter({
+        text: `ID: ${callbackId} | Processed by: ${interaction.user.username}`, 
+        iconURL: interaction.user.displayAvatarURL()  // Add the user's avatar to the footer
+    })
+    .setTimestamp();
 
             // Reply to the sender with the embed
             return interaction.editReply({

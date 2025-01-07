@@ -1,11 +1,11 @@
 const mysql = require('mysql2/promise');
 
 const dbConfig = {
-    host: 'db-slc-01.sparkedhost.us',
+    host: 'db-buf-05.sparkedhost.us',
     port: 3306,
-    user: 'u159065_NRReexzO8u',
-    password: 'NYhVmPvK@BDoq=+y2j6DbMTC',
-    database: 's159065_Test-Database'
+    user: 'u159065_dT0ZxTfNn0',
+    password: 'e4!=6PqJ+dFyquGs@OczJcVR',
+    database: 's159065_OctoBank'
 };
 
 // Create a connection pool
