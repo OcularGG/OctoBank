@@ -121,7 +121,7 @@ module.exports = {
             // Constructing the embed content
             const embedContent = `
 **Loot Split**
-<:OctoGold:1324817815470870609> **${amount}** OctoGold is being split.
+<:OctoGold:1324817815470870609> **${amount.toLocaleString}** OctoGold is being split.
 
 __**Repair:**__ <:OctoGold:1324817815470870609> **${repairCost.toLocaleString()}** OctoGold
 __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${botShare.toLocaleString()}** OctoGold
