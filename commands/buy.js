@@ -101,7 +101,7 @@ module.exports = {
 
                         const successEmbed = new EmbedBuilder()
                             .setColor('#ffbf00')
-                            .setDescription(`**${targetUsername}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market! Their new total is <:OctoGold:1324817815470870609> **${formattedNewBalance}** OctoGold!`)
+                            .setDescription(`**${targetUsername}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!\n\nTheir new total is <:OctoGold:1324817815470870609> **${formattedNewBalance}** OctoGold!`)
                             .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
                             .setFooter({ text: `Transaction completed by ${sender.username} | Callback ID: ${callbackId}` });
 
@@ -136,7 +136,7 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor('#ffbf00')
-                .setDescription(`**${targetUsername}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market! Their new total is <:OctoGold:1324817815470870609> **${formattedNewBalance}** OctoGold!`)
+                .setDescription(`**${targetUsername}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!\n\nTheir new total is <:OctoGold:1324817815470870609> **${formattedNewBalance}** OctoGold!`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
                 .setFooter({ text: `ID: ${callbackId} | Transaction completed by ${sender.username} `, iconURL: interaction.user.displayAvatarURL() });
 
