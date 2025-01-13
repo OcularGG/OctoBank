@@ -33,7 +33,7 @@ module.exports = {
                     .setFooter({ text: `Balance requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
                     .setTimestamp();
 
-                return interaction.editReply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
+                return interaction.editReply({ embeds: [embed], ephemeral: true });  // Ephemeral response
             }
 
             // If user exists, send their balance in an embed
@@ -48,12 +48,12 @@ module.exports = {
                 .setFooter({ text: `Balance requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed], flags: 64 });  // Using flags for ephemeral responses
+            return interaction.editReply({ embeds: [embed], ephemeral: true });  // Ephemeral response
         } catch (error) {
             console.error(error);
             return interaction.editReply({
                 content: 'There was an error fetching the balance.',
-                flags: 64,  // Using flags for ephemeral responses
+                ephemeral: true
             });
         }
     },
