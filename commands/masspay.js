@@ -119,7 +119,7 @@ module.exports = {
 
             // Create the embed with the updated information
             const embed = new EmbedBuilder()
-                .setColor('#ffbf00')
+                .setColor('#25963d')
                 .setTitle('Mass Transaction Successful')
                 .setDescription(`${actionText}\n\n${actionMessage}`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
@@ -137,7 +137,20 @@ module.exports = {
             console.error(error);
             // Rollback in case of error
             await connection.rollback();
-            return interaction.editReply({ content: 'There was an error processing the mass transaction.' }); // Ephemeral response
+
+
+            
+            // Create error embed with bright red color
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#f81f18')  // bright red
+                .setTitle('Error Processing Transaction')
+                .setDescription('There was an error processing the mass transaction.')
+                .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
+                .setFooter({ text: `Transaction failed | Processed by ${interaction.user.username}`, 
+                        iconURL: interaction.user.displayAvatarURL() })
+                .setTimestamp();
+
+            return interaction.editReply({ embeds: [errorEmbed] }); // Send error embed({ content: 'There was an error processing the mass transaction.' }); // Ephemeral response
         } finally {
             // Release the connection back to the pool
             connection.release();
