@@ -85,7 +85,11 @@ module.exports = {
                     const newRecipientBalance = recipientBalance + amount;
                     await connection.query('UPDATE coins SET balance = ? WHERE username = ?', [newRecipientBalance, user.username]);
 
-                    usersList.push(user.username); // Add to list of successfully processed users
+                    usersList.push({
+                        username: user.username,
+                        amount: Math.abs(amount).toLocaleString(),
+                        balance: newRecipientBalance.toLocaleString(),
+                    }); // Add to list of successfully processed users with updated balance
 
                     // Log the action in the auditlog table for each user with the callback ID
                     await logAudit(amount < 0 ? 'withdraw' : 'deposit', sender, user.username, amount, parsedCallbackId);
@@ -103,8 +107,13 @@ module.exports = {
             const actionType = amount < 0 ? 'withdraw' : 'deposit';
             const formattedAmount = Math.abs(amount).toLocaleString();
             let actionMessage = actionType === 'withdraw'
-                ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n\n**${usersList.join('\n')}**`
-                : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n\n**${usersList.join('\n')}**`;
+                ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n\n**${usersList.map(u => `${u.username}`).join('\n')}**`
+                : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n\n**${usersList.map(u => `${u.username}`).join('\n')}**`;
+
+            // Add detailed balance info to the message
+            usersList.forEach(user => {
+                actionMessage += `\n**${user.username}** received <:OctoGold:1324817815470870609> **${user.amount}** OctoGold, and now has <:OctoGold:1324817815470870609> **${user.balance}** OctoGold`;
+            });
 
             // Add failed users to the message if any
             if (failedUsers.length > 0) {
@@ -131,15 +140,11 @@ module.exports = {
             // Send the embed to the channel (everyone can see it)
             await interaction.editReply({ embeds: [embed] });
 
-        
-
         } catch (error) {
             console.error(error);
             // Rollback in case of error
             await connection.rollback();
 
-
-            
             // Create error embed with bright red color
             const errorEmbed = new EmbedBuilder()
                 .setColor('#f81f18')  // bright red
@@ -150,7 +155,7 @@ module.exports = {
                         iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [errorEmbed] }); // Send error embed({ content: 'There was an error processing the mass transaction.' }); // Ephemeral response
+            return interaction.editReply({ embeds: [errorEmbed] }); // Send error embed
         } finally {
             // Release the connection back to the pool
             connection.release();
