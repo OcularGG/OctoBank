@@ -1,10 +1,12 @@
-require('dotenv').config({ path: './secrets.env' });console.log("Loaded token from .env:", process.env.TOKEN);
+require('dotenv').config({ path: './secrets.env' });
+console.log("Loaded token from .env:", process.env.TOKEN);
 console.log("Environment variables loaded:", process.env);
 
 const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const db = require('./db'); 
+const db = require('./db');
+const giveaway = require('./giveaway');  // Import the giveaway module
 
 const client = new Client({
     intents: [
@@ -21,7 +23,50 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    commands.push(command);  
+    commands.push(command);
+}
+
+// Check bot permissions on startup
+async function checkBotPermissions(guildId, channelId) {
+    try {
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            console.error("Guild not found!");
+            return;
+        }
+
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel) {
+            console.error("Channel not found!");
+            return;
+        }
+
+        const permissions = channel.permissionsFor(client.user);
+
+        console.log(`Checking bot permissions in channel ${channelId}...`);
+
+        // Checking specific permissions
+        const canSendMessages = permissions.has('SEND_MESSAGES');
+        const canReact = permissions.has('ADD_REACTIONS');
+        const canReadMessages = permissions.has('READ_MESSAGE_HISTORY');
+        const canManageMessages = permissions.has('MANAGE_MESSAGES');
+
+        console.log(`Can send messages: ${canSendMessages}`);
+        console.log(`Can react: ${canReact}`);
+        console.log(`Can read messages: ${canReadMessages}`);
+        console.log(`Can manage messages: ${canManageMessages}`);
+
+        // Ensure the bot has all required permissions
+        if (!canSendMessages || !canReact || !canReadMessages || !canManageMessages) {
+            console.error("Bot does not have all required permissions in this channel.");
+            return false; // Indicate missing permissions
+        }
+
+        return true; // All required permissions are present
+    } catch (error) {
+        console.error("Error checking bot permissions:", error);
+        return false;
+    }
 }
 
 async function updateBotStatus() {
@@ -59,6 +104,21 @@ client.on('ready', async () => {
 
     try {
         const guildId = '1097537634756214957';
+        const giveawayChannelId = '1277998632917925939'; // Provided channel ID
+
+        // Check bot permissions on startup
+        await checkBotPermissions(guildId, giveawayChannelId);
+
+        // Other operations (commands, giveaways, etc.)
+        await handleCommandsAndGiveaways(guildId);
+
+    } catch (error) {
+        console.error('Error during bot startup:', error);
+    }
+});
+
+async function handleCommandsAndGiveaways(guildId) {
+    try {
         const guild = client.guilds.cache.get(guildId);
 
         if (guild) {
@@ -78,9 +138,7 @@ client.on('ready', async () => {
                     console.log(`Registering new command: ${commandName}`);
                     commandsToRegister.push(command);
                 } else {
-
                     const existingCommand = existingCommands.find(cmd => cmd.name === commandName);
-
                     const isSameArguments = existingCommand.options.length === command.data.options.length
                         && existingCommand.options.every((option, index) => {
                             const newOption = command.data.options[index];
@@ -115,10 +173,19 @@ client.on('ready', async () => {
         } else {
             console.log('Guild not found!');
         }
+
+        // Start the giveaway logic when bot is ready
+        giveaway.startGiveaways(client);  // Pass `client` to the startGiveaways function
+
+        // Set an interval to run the giveaway every 6 hours (21600000 milliseconds)
+        setInterval(async () => {
+            await giveaway.startGiveaways(client);  // Ensure that `client` is passed
+        }, 21600000);  // 6 hours in milliseconds
+
     } catch (error) {
         console.error('Error registering commands:', error);
     }
-});
+}
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand()) return;
@@ -128,13 +195,11 @@ client.on('interactionCreate', async (interaction) => {
 
     try {
         await command.execute(interaction);
-
         await updateBotStatus();
-
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
 });
 
-client.login(process.env.TOKEN); 
+client.login(process.env.TOKEN);
