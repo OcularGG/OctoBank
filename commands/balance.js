@@ -24,7 +24,7 @@ module.exports = {
 
                 const embed = new EmbedBuilder()
                     .setColor('#ffbf00')
-                    .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}**, your current balance is <:OctoGold:1324817815470870609> **0** OctoGold.`)
+                    .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}**'s current balance is <:OctoGold:1324817815470870609> **0** OctoGold.`)
                     .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
                     .setFooter({ text: `Balance requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
                     .setTimestamp();

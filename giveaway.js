@@ -33,10 +33,22 @@ async function getNextCallbackId() {
 // Function to choose a random winner from the reactions
 async function chooseWinner(reactions, message, prize) {
     const users = await message.reactions.cache.get(reactions).users.fetch();
-    const nonBotUsers = Array.from(users.filter(user => !user.bot).values()); // Convert to array
+    
+    // Create a set to track unique users (prevent duplicates)
+    const userSet = new Set();
+    
+    // Filter out bots and keep track of unique users
+    const nonBotUsers = Array.from(users.filter(user => !user.bot).values())
+        .filter(user => {
+            if (userSet.has(user.id)) return false;  // User has already reacted
+            userSet.add(user.id);  // Add user to set to prevent further entries
+            return true;
+        });
+
     if (nonBotUsers.length === 0) {
         return null; // No valid users to choose from
     }
+
     // Choose a random user using the method you suggested
     const winner = nonBotUsers[Math.floor(Math.random() * nonBotUsers.length)];
     return winner;

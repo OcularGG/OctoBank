@@ -27,7 +27,7 @@ module.exports = {
                             `**/masspay**: Pay or withdraw OctoGold to multiple users (Teller only)\n` +
                             `**/buy**: Spend OctoGold in the guild market (Teller only)\n` +
                             `**/payout**: Pay out OctoGold to a user (Teller only)\n` +
-                            `**/lootsplit**: Lootsplit calculator`;
+                            `**/lootsplit**: Lootsplit calculator (Teller only)`;
 
         // Create the embed with no title, just description, and include the bot's name, avatar, and user's avatar in the footer
         const helpEmbed = createHelpEmbed(generalHelp, interaction.client, interaction.user);
