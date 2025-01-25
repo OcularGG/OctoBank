@@ -26,7 +26,6 @@ for (const file of commandFiles) {
     commands.push(command);
 }
 
-// Check bot permissions on startup
 async function checkBotPermissions(guildId, channelId) {
     try {
         const guild = client.guilds.cache.get(guildId);
@@ -97,6 +96,8 @@ async function updateBotStatus() {
     }
 }
 
+const { removeBalancesForRemovedUsers, onUserLeave } = require('./removeBalanceOnLeave');
+
 client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
 
@@ -112,10 +113,16 @@ client.on('ready', async () => {
         // Other operations (commands, giveaways, etc.)
         await handleCommandsAndGiveaways(guildId);
 
+        // Call the function to remove balances of users not in the guild
+        await removeBalancesForRemovedUsers(client, db, guildId);  // Correct way to call the function
+
+        // Set up listener for when users leave the guild
+        onUserLeave(client, db);  // Add this line to set up the listener
     } catch (error) {
         console.error('Error during bot startup:', error);
     }
 });
+
 
 async function handleCommandsAndGiveaways(guildId) {
     try {
