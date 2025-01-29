@@ -131,7 +131,7 @@ ${userDetails}
 `.trim();
 
 const lines = embedContent.split('\n');
-const LINES_PER_EMBED = 10;
+const LINES_PER_EMBED = 15;
 let currentIndex = 0;
 let isFirstEmbed = true;
 
