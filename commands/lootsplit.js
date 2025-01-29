@@ -128,57 +128,43 @@ __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${botShare.toLocaleString()
 __**Being Split:**__ <:OctoGold:1324817815470870609> **${remainingLoot.toLocaleString()}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold.
 
 ${userDetails}
-`;
+`.trim();
 
-            // Maximum embed description size (Discord limit)
-            const MAX_EMBED_SIZE = 4096;
-            const embeds = [];
+const lines = embedContent.split('\n');
+const LINES_PER_EMBED = 10;
+let currentIndex = 0;
+let isFirstEmbed = true;
 
-            let currentEmbedContent = embedContent.trim();
+while (currentIndex < lines.length) {
+    const chunk = lines.slice(currentIndex, currentIndex + LINES_PER_EMBED).join('\n');
+    currentIndex += LINES_PER_EMBED;
 
-            // Split content into multiple embeds if necessary
-            while (currentEmbedContent.length > MAX_EMBED_SIZE) {
-                const lastLineBreak = currentEmbedContent.lastIndexOf('\n', MAX_EMBED_SIZE);
-                const splitPoint = lastLineBreak === -1 ? MAX_EMBED_SIZE : lastLineBreak;
+    const embed = new EmbedBuilder()
+        .setColor('#ffbf00')
+        .setDescription(chunk)
+        .setAuthor({
+            name: interaction.client.user.username,
+            iconURL: interaction.client.user.displayAvatarURL()
+        })
+        .setFooter({
+            text: `ID: ${callbackId} | Transaction processed by ${interaction.user.username}`,
+            iconURL: interaction.user.displayAvatarURL()
+        })
+        .setTimestamp();
 
-                const embedContentSlice = currentEmbedContent.slice(0, splitPoint);
-                embeds.push(new EmbedBuilder()
-                    .setColor('#ffbf00')
-                    .setDescription(embedContentSlice)
-                    .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                    .setFooter({ 
-                        text: `ID: ${callbackId} | Transaction processed by ${interaction.user.username}`, 
-                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
-                    })
-                    .setTimestamp()
-                );
-
-                currentEmbedContent = currentEmbedContent.slice(splitPoint).trim();
-            }
-
-            // Add the remaining content as the final embed
-            if (currentEmbedContent.length > 0) {
-                embeds.push(new EmbedBuilder()
-                    .setColor('#ffbf00')
-                    .setDescription(currentEmbedContent)
-                    .setAuthor({ 
-                        name: interaction.client.user.username, 
-                        iconURL: interaction.client.user.displayAvatarURL() 
-                    })
-                    .setFooter({ 
-                        text: `ID: ${callbackId} | Transaction processed by ${interaction.user.username}`, 
-                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
-                    })
-                    .setTimestamp()
-                );
-            }
-            
+    if (isFirstEmbed) {
+        await interaction.editReply({ embeds: [embed] });
+        isFirstEmbed = false;
+    } else {
+        await interaction.followUp({ embeds: [embed] });
+    }
+}            
 
             // Send all the embeds at once
             await interaction.editReply({ embeds }); // This will make the reply visible to everyone
         } catch (error) {
             console.error('Error executing loot split command:', error);
-            await interaction.followUp({ content: 'There was an error processing your request.' });
+            //await interaction.followUp({ content: 'There was an error processing your request.' });
         }
     },
 };
