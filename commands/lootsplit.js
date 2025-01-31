@@ -161,10 +161,10 @@ while (currentIndex < lines.length) {
 }            
 
             // Send all the embeds at once
-            await interaction.editReply({ embeds }); // This will make the reply visible to everyone
+        //await interaction.editReply({ embeds }); // This will make the reply visible to everyone
         } catch (error) {
             console.error('Error executing loot split command:', error);
-            //await interaction.followUp({ content: 'There was an error processing your request.' });
+            await interaction.followUp({ content: 'There was an error processing your request.' });
         }
     },
 };
