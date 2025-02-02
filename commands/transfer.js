@@ -23,17 +23,17 @@ async function getNextCallbackId() {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('tip')
-        .setDescription('Tip another user some OctoGold')
+        .setDescription('Transfer another user some OctoGold')
         .addIntegerOption(option => 
             option
                 .setName('amount')
-                .setDescription('How much do you want to tip?')
+                .setDescription('How much do you want to transfer?')
                 .setRequired(true)
         )
         .addUserOption(option =>
             option
                 .setName('recipient')
-                .setDescription('Who are you tipping?')
+                .setDescription('Who are you transfering to?')
                 .setRequired(true)
         ),
 
@@ -50,7 +50,7 @@ module.exports = {
             }
 
             if (tipper == recipientMember){
-                return interaction.editReply('Stop trying to tip yourself scammer.');
+                return interaction.editReply('You cant transfer money to yourself.');
             }
 
             const [tipperRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [tipper.username]);
@@ -82,7 +82,7 @@ module.exports = {
                 .setColor('#ffbf00')
                 .setTitle('Tip Confirmation')
                 .setDescription(
-                    `**${tipper.username}** has tipped ` +
+                    `**${tipper.username}** has transfered ` +
                     `**${amount.toLocaleString()}** OctoGold to **${recipientMember.username}**.`
                 )
                 .addFields(
@@ -103,8 +103,8 @@ module.exports = {
             await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('Error executing tip command:', error);
-            await interaction.followUp({ content: 'There was an error processing your tip.' });
+            console.error('Error executing transfer command:', error);
+            await interaction.followUp({ content: 'There was an error processing your transfer.' });
         }
     },
 };
