@@ -23,6 +23,7 @@ module.exports = {
     async execute(interaction) {
         // General Command Help
         const generalHelp = `**/balance**: Check your current OctoGold balance\n` +
+                            `**/transfer**: Transfer OctoGold between users\n` +
                             `**/pay**: Pay or withdraw OctoGold to a user (Teller only)\n` +
                             `**/masspay**: Pay or withdraw OctoGold to multiple users (Teller only)\n` +
                             `**/buy**: Spend OctoGold in the guild market (Teller only)\n` +

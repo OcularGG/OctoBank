@@ -63,13 +63,22 @@ module.exports = {
             const userShare = remainingLoot - botShare;
 
             // Parse the userInput string into an array of user IDs
-            const mentionedUsers = userInput.match(/<@!?(\d+)>/g)?.map((mention) => mention.replace(/[<@!>]/g, '')) || [];
-            if (mentionedUsers.length === 0) {
-                return interaction.editReply('No valid users mentioned to split the loot with!');
-            }
+      const mentionedUsers = userInput.match(/<@!?(\d+)>/g)?.map((mention) => mention.replace(/[<@!>]/g, '')) || [];
+
+if (mentionedUsers.length === 0) {
+    return interaction.editReply('No valid users mentioned to split the loot with!');
+}
+
+// Ensure uniqueness by converting to a Set and then back to an array
+const uniqueUsers = [...new Set(mentionedUsers)];
+
+if (uniqueUsers.length === 0) {
+    return interaction.editReply('No unique valid users mentioned to split the loot with!');
+}
+
 
             // Calculate how much each user gets (rounded down)
-            const individualShare = Math.floor(userShare / mentionedUsers.length);
+            const individualShare = Math.floor(userShare / uniqueUsers.length);
 
             let userDetails = ""; // Store user split details
             const userUpdates = [];
@@ -79,7 +88,7 @@ module.exports = {
             const callbackId = await getNextCallbackId();
 
             // Process each mentioned user
-            for (const userId of mentionedUsers) {
+            for (const userId of uniqueUsers) {
                 const targetUser = await interaction.guild.members.fetch(userId);
                 if (!targetUser) continue;
 
@@ -125,7 +134,7 @@ module.exports = {
 
 __**Repair:**__ <:OctoGold:1324817815470870609> **${repairCost.toLocaleString()}** OctoGold
 __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${botShare.toLocaleString()}** OctoGold
-__**Being Split:**__ <:OctoGold:1324817815470870609> **${remainingLoot.toLocaleString()}** OctoGold to **${mentionedUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold.
+__**Being Split:**__ <:OctoGold:1324817815470870609> **${remainingLoot.toLocaleString()}** OctoGold to **${uniqueUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold.
 
 ${userDetails}
 `.trim();
@@ -161,7 +170,7 @@ while (currentIndex < lines.length) {
 }            
 
             // Send all the embeds at once
-            await interaction.editReply({ embeds }); // This will make the reply visible to everyone
+           // await interaction.editReply({ embeds }); // This will make the reply visible to everyone
         } catch (error) {
             console.error('Error executing loot split command:', error);
             //await interaction.followUp({ content: 'There was an error processing your request.' });

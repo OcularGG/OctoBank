@@ -22,8 +22,8 @@ async function getNextCallbackId() {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('tip')
-        .setDescription('Transfer another user some OctoGold')
+        .setName('Transfer')
+        .setDescription('Transfer OctoGold to another user.')
         .addIntegerOption(option => 
             option
                 .setName('amount')
@@ -39,36 +39,36 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({  });
+            await interaction.deferReply();
 
             const tipper = interaction.user; 
             const amount = interaction.options.getInteger('amount');
             const recipientMember = interaction.options.getUser('recipient');
 
             if (amount <= 0) {
-                return interaction.editReply('tip positive bozo');
+                return interaction.editReply('You can only Transfer positive amounts.');
             }
 
             if (tipper == recipientMember){
                 return interaction.editReply('You cant transfer money to yourself.');
             }
 
-            const [tipperRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [tipper.username]);
-            const tipperBalance = tipperRows.length > 0 ? tipperRows[0].balance : 0;
+            const [transferRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [tipper.username]);
+            const transferBalance = transferRows.length > 0 ? transferRows[0].balance : 0;
 
-            if (tipperBalance < amount) {
-                return interaction.editReply('You are too broke for this tip lmao');
+            if (transferBalance < amount) {
+                return interaction.editReply('You dont have enough money to do this transfer');
             }
 
             const [recipientRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [recipientMember.username]);
             const recipientBalance = recipientRows.length > 0 ? recipientRows[0].balance : 0;
 
-            const newTipperBalance = tipperBalance - amount;
+            const newTransferBalance = transferBalance - amount;
             const newRecipientBalance = recipientBalance + amount;
 
             await db.query(
                 'INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?',
-                [tipper.username, newTipperBalance, newTipperBalance]
+                [tipper.username, newTransferBalance, newTransferBalance]
             );
             await db.query(
                 'INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?',
@@ -76,11 +76,11 @@ module.exports = {
             );
 
             const callbackId = await getNextCallbackId();
-            await logAudit('tip', tipper.username, recipientMember.username, amount, callbackId);
+            await logAudit('Transfer', tipper.username, recipientMember.username, amount, callbackId);
 
             const embed = new EmbedBuilder()
                 .setColor('#ffbf00')
-                .setTitle('Tip Confirmation')
+                .setTitle('Transfer Confirmation')
                 .setDescription(
                     `**${tipper.username}** has transfered ` +
                     `**${amount.toLocaleString()}** OctoGold to **${recipientMember.username}**.`
@@ -88,7 +88,7 @@ module.exports = {
                 .addFields(
                     { 
                         name: `${tipper.username}'s New Balance`, 
-                        value: `${newTipperBalance.toLocaleString()} OctoGold`, 
+                        value: `${newTransferBalance.toLocaleString()} OctoGold`, 
                         inline: true 
                     },
                     { 
