@@ -22,7 +22,7 @@ async function getNextCallbackId() {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('Transfer')
+        .setName('transfer')
         .setDescription('Transfer OctoGold to another user.')
         .addIntegerOption(option => 
             option
