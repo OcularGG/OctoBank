@@ -83,17 +83,17 @@ module.exports = {
                 .setTitle('Transfer Confirmation')
                 .setDescription(
                     `**${tipper.username}** has transfered ` +
-                    `**${amount.toLocaleString()}** OctoGold to **${recipientMember.username}**.`
+                    `<:OctoGold:1324817815470870609> **${amount.toLocaleString()}** OctoGold to **${recipientMember.username}**.`
                 )
                 .addFields(
                     { 
                         name: `${tipper.username}'s New Balance`, 
-                        value: `${newTransferBalance.toLocaleString()} OctoGold`, 
+                        value: `<:OctoGold:1324817815470870609> **${newTransferBalance.toLocaleString()}** OctoGold`, 
                         inline: true 
                     },
                     { 
                         name: `${recipientMember.username}'s New Balance`, 
-                        value: `${newRecipientBalance.toLocaleString()} OctoGold`, 
+                        value: `<:OctoGold:1324817815470870609> **${newRecipientBalance.toLocaleString()}** OctoGold`, 
                         inline: true 
                     }
                 )

@@ -71,7 +71,7 @@ async function checkBotPermissions(guildId, channelId) {
 
 async function updateBotStatus() {
     try {
-        const [rows] = await db.query('SELECT SUM(balance) AS totalBalance FROM coins');
+        const [rows] = await db.query("SELECT SUM(balance) AS totalBalance from coins WHERE username != 'OctoBank'");
 
         if (rows.length > 0 && rows[0].totalBalance !== null) {
             let totalBalance = rows[0].totalBalance;
@@ -183,12 +183,12 @@ async function handleCommandsAndGiveaways(guildId) {
         }
 
         // Start the giveaway logic when bot is ready
-        giveaway.startGiveaways(client);  // Pass `client` to the startGiveaways function
+       // giveaway.startGiveaways(client);  // Pass `client` to the startGiveaways function
 
         // Set an interval to run the giveaway every 6 hours (21600000 milliseconds)
-        setInterval(async () => {
-            await giveaway.startGiveaways(client);  // Ensure that `client` is passed
-        }, 21600000);  // 6 hours in milliseconds
+        //setInterval(async () => {
+            //await giveaway.startGiveaways(client);  // Ensure that `client` is passed
+        //}, 21600000);  // 6 hours in milliseconds
 
     } catch (error) {
         console.error('Error registering commands:', error);
