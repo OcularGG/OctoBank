@@ -6,6 +6,8 @@ const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const db = require('./db');
+const troll = require('./troll.js');
+
 const giveaway = require('./giveaway');  // Import the giveaway module
 
 const client = new Client({
@@ -184,7 +186,7 @@ async function handleCommandsAndGiveaways(guildId) {
 
         // Start the giveaway logic when bot is ready
        // giveaway.startGiveaways(client);  // Pass `client` to the startGiveaways function
-
+        troll(client);
         // Set an interval to run the giveaway every 6 hours (21600000 milliseconds)
         //setInterval(async () => {
             //await giveaway.startGiveaways(client);  // Ensure that `client` is passed
