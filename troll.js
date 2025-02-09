@@ -6,7 +6,7 @@ module.exports = (client) => {
 
         // Check if the bot is mentioned in the message
         if (message.mentions.has(client.user)) {
-            message.reply('Don\'t ping me');
+            message.reply('Do i look like I want to be pinged by you? Cant you see im counting OctoGold here? smh');
         }
     });
 };
