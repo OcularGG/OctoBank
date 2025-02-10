@@ -6,7 +6,10 @@ module.exports = (client) => {
 
         // Check if the bot is mentioned in the message
         if (message.mentions.has(client.user)) {
-            message.reply('Don\'t ping me');
+            // Only respond if the user has the specific userID
+            if (message.author.id === '854948541742317578') {
+                message.reply('Do I look like I want to be pinged by you? Can’t you see I’m counting OctoGold here? smh');
+            }
         }
     });
 };
