@@ -140,7 +140,7 @@ ${userDetails}
 `.trim();
 
 const lines = embedContent.split('\n');
-const LINES_PER_EMBED = 15;
+const LINES_PER_EMBED = 20;
 let currentIndex = 0;
 let isFirstEmbed = true;
 

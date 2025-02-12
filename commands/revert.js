@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const db = require('../db');  // Assuming you have a db.js file for database connection
+const db = require('../db');
 
 // Function to log the action in the auditlog table
 async function logAudit(action, sender, target, amount, callbackId) {
@@ -42,39 +42,54 @@ module.exports = {
                 return interaction.followUp({ content: `No actions found with callback ID: ${callbackId}`, ephemeral: true });
             }
 
-            // Revert the balances for all affected users and prepare embed data
-            const embedFields = [];
-            const actions = [];
-
+            // Prepare embed content by awaiting each action's revert process
+            const embedContent = [];
             for (const row of rows) {
                 const { sender, target, amount } = row;
 
-                // Revert the balance of the target user
+                // Revert the balance of the target user and get the new balance
                 await handleRevert(target, -amount, callbackId, interaction);
 
                 // Get the current balance after revert
                 const [recipientRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [target]);
                 const currentBalance = recipientRows.length > 0 ? recipientRows[0].balance : 0;
 
-                // Create the embed field for the user
-                embedFields.push({
-                    name: target,
-                    value: `**Action**: Reverted <:OctoGold:1324817815470870609> ${Math.abs(amount).toLocaleString()} OctoGold\n` +
-                           `**New Balance**: <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()} OctoGold`
-                });
+                // Push formatted content for each user to embedContent
+                embedContent.push(`**Target:** ${target}\n**Action:** Reverted <:OctoGold:1324817815470870609> ${Math.abs(amount).toLocaleString()} OctoGold\n**New Balance:** <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()} OctoGold\n`);
             }
 
-            // Create the success embed
-            const successEmbed = new EmbedBuilder()
-                .setColor('#ffbf00')
-                .setDescription(`The actions with callback ID: **${callbackId}** have been successfully reverted.`)
-                .addFields(...embedFields)
-                .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `Reversion processed by ${interaction.user.username}`, 
-                    iconURL: interaction.user.displayAvatarURL() })
-                .setTimestamp();
+            // Join all the embed content and split it into multiple embeds if necessary
+            const content = embedContent.join('\n');
+            const lines = content.split('\n');
+            const LINES_PER_EMBED = 25;
+            let currentIndex = 0;
+            let isFirstEmbed = true;
 
-            return interaction.followUp({ embeds: [successEmbed] });
+            while (currentIndex < lines.length) {
+                const chunk = lines.slice(currentIndex, currentIndex + LINES_PER_EMBED).join('\n');
+                currentIndex += LINES_PER_EMBED;
+
+                const embed = new EmbedBuilder()
+                    .setColor('#ffbf00')
+                    .setDescription(chunk)
+                    .setAuthor({
+                        name: interaction.client.user.username,
+                        iconURL: interaction.client.user.displayAvatarURL()
+                    })
+                    .setFooter({
+                        text: `Transaction processed by ${interaction.user.username}`,
+                        iconURL: interaction.user.displayAvatarURL()
+                    })
+                    .setTimestamp();
+
+                // First embed uses editReply, others use followUp
+                if (isFirstEmbed) {
+                    await interaction.editReply({ embeds: [embed] });
+                    isFirstEmbed = false;
+                } else {
+                    await interaction.followUp({ embeds: [embed] });
+                }
+            }
 
         } catch (error) {
             console.error('Error processing revert:', error);
