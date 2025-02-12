@@ -134,7 +134,7 @@ if (uniqueUsers.length === 0) {
 
 __**Repair:**__ <:OctoGold:1324817815470870609> **${repairCost.toLocaleString()}** OctoGold
 __**Guild Tax:**__ <:OctoGold:1324817815470870609> **${botShare.toLocaleString()}** OctoGold
-__**Being Split:**__ <:OctoGold:1324817815470870609> **${remainingLoot.toLocaleString()}** OctoGold to **${uniqueUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold.
+__**Being Split:**__ <:OctoGold:1324817815470870609> **${userShare.toLocaleString()}** OctoGold to **${uniqueUsers.length}** players. Each share is worth <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold.
 
 ${userDetails}
 `.trim();
