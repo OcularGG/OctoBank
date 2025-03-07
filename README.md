@@ -21,7 +21,7 @@
     <a href="https://octobank.ocular-gaming.net/roadmap">Roadmap</a>
   </p>
 </p>
-
+<h3 align="center">What powers OctoBank?</h3>
 <p align="center">
     <img src="https://img.shields.io/badge/JavaScript-323330?style=for-the-badge&logo=javascript&logoColor=F7DF1E" alt="JavaScript">
     <img src="https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
