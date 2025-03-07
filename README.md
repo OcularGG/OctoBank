@@ -38,4 +38,4 @@
 
 ## OctoBank in Action
 
-<img width="100%" alt="booking-screen" src="https://github.com/OcularGG/OctoBank/blob/master/2025-03-07%2013-51-36.gif">
+<img width="100%" alt="booking-screen" src="https://github.com/OcularGG/OctoBank/blob/master/lootsplitgif.gif">
