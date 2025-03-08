@@ -29,8 +29,6 @@
     <img src="https://img.shields.io/badge/Visual_Studio_Code-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white" alt="Visual Studio Code">
     <img src="https://img.shields.io/badge/Trello-0052CC?style=for-the-badge&logo=trello&logoColor=white" alt="Trello">
     <img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
-    <img src="https://img.shields.io/badge/DoorDash-FF3008?style=for-the-badge&logo=DoorDash&logoColor=white" alt="DoorDash">
-    <img src="https://img.shields.io/badge/Grubhub-F63440?style=for-the-badge&logo=Grubhub&logoColor=white" alt="GrubHub">
 </p>
 
 <!-- OctoBank in Action -->
