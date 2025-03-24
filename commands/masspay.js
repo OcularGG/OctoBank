@@ -1,121 +1,81 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const db = require('../db');  // Assuming you have a db.js file for database connection
-
-// Function to log the action in the auditlog table
-async function logAudit(action, sender, target, amount, callbackId) {
-    const query = `
-        INSERT INTO auditlog (action, sender, target, amount, callback)
-        VALUES (?, ?, ?, ?, ?);
-    `;
-    try {
-        await db.query(query, [action, sender, target, amount, callbackId]);
-    } catch (error) {
-        console.error('Error logging audit:', error);
-    }
-}
-
-// Function to get the next callback ID
-async function getNextCallbackId() {
-    const query = 'SELECT MAX(callback) AS maxCallbackId FROM auditlog';
-    const [result] = await db.query(query);
-    // Ensure we add 1 to the maximum callback value and parse it to an integer
-    const maxCallbackId = parseInt(result[0]?.maxCallbackId || '0', 10);
-    return maxCallbackId + 1; // Increment the callbackId by 1
-}
+const db = require('../db');
+const AuditLogService = require('../services/AuditLogService');
+const User = require('../classes/User');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('masspay')
         .setDescription('Give or withdraw coins from multiple users')
         .addIntegerOption(option => option.setName('amount').setDescription('Amount of coins to send or withdraw').setRequired(true))
-        .addStringOption(option => option.setName('users').setDescription('The users to send coins to or withdraw from (mention multiple users)').setRequired(true)),
-
+        .addStringOption(option => option.setName('users').setDescription('The users to send coins to or withdraw from (mention multiple users)').setRequired(true))
+        .addStringOption(option=> option.setName('reason').setDescription('Reason for the masspay').setRequired(true)),
     async execute(interaction) {
-        // Acknowledge the interaction and defer the reply to prevent timeout
-        await interaction.deferReply(); // Defers the reply to prevent timeout
+        await interaction.deferReply();
 
         const amount = interaction.options.getInteger('amount');
         const userInput = interaction.options.getString('users');
         const sender = interaction.user.username;
-
-        // Split the userInput string into an array of mentioned users
-        const mentionedUsers = userInput.match(/<@!?(\d+)>/g); // Regex to match user mentions, e.g., <@123456789>
+        const reason = interaction.options.getString('reason');
+        const mentionedUsers = userInput.match(/<@!?(\d+)>/g);
 
         if (!mentionedUsers || mentionedUsers.length === 0) {
             return interaction.editReply({ content: 'Please mention at least one user.' });
         }
 
-        // Check if amount is 0
-        if (amount === 0) {
-            return interaction.editReply({ content: 'The amount must be greater than or less than zero.' });
+        if (amount <= 0) {
+            return interaction.editReply({ content: 'The amount must be greater than zero.' });
         }
 
-        // Ensure the mentioned users are valid and format them properly
         const users = mentionedUsers.map(user => user.replace(/<@!?(\d+)>/, '$1'));
 
         const connection = await db.getConnection();
-        const failedUsers = []; // Array to store users that failed the transaction
-        const usersList = []; // Array to store successfully processed users for display
+        const failedUsers = [];
+        const usersList = [];
 
         try {
-            // Get the next callback ID
-            const callbackId = await getNextCallbackId();
 
-            // Convert callbackId to integer (parseInt())
+            const callbackId = await AuditLogService.getNextCallbackId(); 
+
             const parsedCallbackId = parseInt(callbackId, 10);
 
-            // Start a transaction
             await connection.beginTransaction();
 
-            // Iterate over all mentioned users
             for (const userId of users) {
                 const user = await interaction.client.users.fetch(userId);
 
                 try {
-                    // Fetch the recipient's balance
-                    const [recipientRows] = await connection.query('SELECT balance FROM coins WHERE username = ?', [user.username]);
-                    if (recipientRows.length === 0) {
-                        // If the recipient doesn't exist, insert them with an initial balance of 0
-                        await connection.query('INSERT INTO coins (username, balance) VALUES (?, ?)', [user.username, 0]);
-                    }
+                    const recipient = await User.fetchUser(user.username);
 
-                    const recipientBalance = recipientRows[0]?.balance || 0;
-
-                    // Update the recipient's balance (give or withdraw)
-                    const newRecipientBalance = recipientBalance + amount;
-                    await connection.query('UPDATE coins SET balance = ? WHERE username = ?', [newRecipientBalance, user.username]);
+                    const newRecipientBalance = recipient.getBalance() + amount;
+                    await User.updateBalance(user.username, newRecipientBalance);
 
                     usersList.push({
                         username: user.username,
                         amount: Math.abs(amount).toLocaleString(),
                         balance: newRecipientBalance.toLocaleString(),
-                    }); // Add to list of successfully processed users with updated balance
+                    });
 
-                    // Log the action in the auditlog table for each user with the callback ID
-                    await logAudit(amount < 0 ? 'withdraw' : 'deposit', sender, user.username, amount, parsedCallbackId);
+                    await AuditLogService.logAudit(amount < 0 ? 'withdraw' : 'deposit', sender, user.username, amount, reason, parsedCallbackId,);
 
                 } catch (err) {
                     console.error(err);
-                    failedUsers.push(userId); // Add to list of failed users
+                    failedUsers.push(userId);
                 }
             }
 
-            // Commit the transaction
             await connection.commit();
 
-            // Prepare the embed message
             const actionType = amount < 0 ? 'withdraw' : 'deposit';
             const formattedAmount = Math.abs(amount).toLocaleString();
             let actionMessage = actionType === 'withdraw'
                 ? `**${interaction.user.username}** has withdrawn <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold from the following users' wallets:\n\n**${usersList.map(u => `${u.username}`).join('\n')}**`
                 : `**${interaction.user.username}** has deposited <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold into the following users' wallets:\n\n**${usersList.map(u => `${u.username}`).join('\n')}**`;
 
-            // Add detailed balance info to the message
             usersList.forEach(user => {
                 actionMessage += `\n**${user.username}** received <:OctoGold:1324817815470870609> **${user.amount}** OctoGold, and now has <:OctoGold:1324817815470870609> **${user.balance}** OctoGold`;
             });
 
-            // Add failed users to the message if any
             if (failedUsers.length > 0) {
                 actionMessage += `\n\n⚠️ Could not process transactions for the following users:\n${failedUsers
                     .map((id) => `<@${id}>`)
@@ -126,28 +86,23 @@ module.exports = {
                 ? '[**Octobank**](https://octobank.ocular-gaming.net/)'
                 : '[**Octobank**](https://octobank.ocular-gaming.net/)';
 
-            // Create the embed with the updated information
             const embed = new EmbedBuilder()
                 .setColor('#25963d')
                 .setTitle('Mass Transaction Successful')
                 .setDescription(`${actionText}\n\n${actionMessage}`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
                 .setFooter({ text: `ID: ${parsedCallbackId} | Transaction processed by ${interaction.user.username}`, 
-                        iconURL: interaction.user.displayAvatarURL() // Add the user's profile picture in the footer
-                    })
+                        iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
-            // Send the embed to the channel (everyone can see it)
             await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
             console.error(error);
-            // Rollback in case of error
             await connection.rollback();
 
-            // Create error embed with bright red color
             const errorEmbed = new EmbedBuilder()
-                .setColor('#f81f18')  // bright red
+                .setColor('#f81f18')
                 .setTitle('Error Processing Transaction')
                 .setDescription('There was an error processing the mass transaction.')
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
@@ -155,9 +110,8 @@ module.exports = {
                         iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [errorEmbed] }); // Send error embed
+            return interaction.editReply({ embeds: [errorEmbed] });
         } finally {
-            // Release the connection back to the pool
             connection.release();
         }
     },

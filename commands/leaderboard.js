@@ -1,6 +1,5 @@
-// leaderboard.js
-const { SlashCommandBuilder } = require('discord.js');
-const db = require('../db'); 
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const LeaderboardService = require('../services/LeaderboardService'); // Import the service
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,34 +8,38 @@ module.exports = {
 
     async execute(interaction) {
         try {
-          
-            const query = `SELECT * FROM coins WHERE username != 'OctoBank' ORDER BY balance DESC LIMIT 10`;
+            const leaderboardService = new LeaderboardService();
+            const leaderboard = await leaderboardService.getLeaderboard(interaction.client.db);
 
-          
-            const [rows] = await db.execute(query); 
+            if (leaderboard.length === 0) {
+                return await interaction.reply({
+                    content: 'No users found in the leaderboard.',
+                    ephemeral: true,
+                });
+            }
 
-           
-            let leaderboardContents = "";
-            rows.forEach((row, index) => {
-                leaderboardContents += `${index + 1}. **${row.username}**: <:OctoGold:1324817815470870609> **${row.balance.toLocaleString()}** OctoGold\n`;
+            let leaderboardContents = '';
+            leaderboard.forEach(user => {
+                leaderboardContents += `${user.rank}. **${user.username}**: <:OctoGold:1324817815470870609> **${user.balance.toLocaleString()}** OctoGold\n`;
             });
 
-            const leaderboardEmbed = {
-                color: 0xffe600,
-                title: 'Leaderboard - Top 10 Users',
-                description: leaderboardContents,
-                footer: {
+            const leaderboardEmbed = new EmbedBuilder()
+                .setColor(0xffe600)
+                .setTitle('Leaderboard - Top 10 Users')
+                .setDescription(leaderboardContents)
+                .setFooter({
                     text: `Requested by ${interaction.user.username}`,
-                    icon_url: interaction.user.avatarURL(),
-                },
-            };
+                    iconURL: interaction.user.avatarURL(),
+                });
 
-            
             await interaction.reply({ embeds: [leaderboardEmbed] });
 
         } catch (error) {
             console.error('Error fetching leaderboard:', error);
-            await interaction.reply({ content: 'There was an error while fetching the leaderboard.', ephemeral: true });
+            await interaction.reply({
+                content: 'There was an error while fetching the leaderboard.',
+                ephemeral: true,
+            });
         }
-    }
+    },
 };

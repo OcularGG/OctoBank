@@ -9,6 +9,7 @@ const db = require('./db');
 const troll = require('./troll.js');
 
 const giveaway = require('./giveaway');  // Import the giveaway module
+const UserLeaveService = require('./services/UserLeaveService'); // Import the UserLeaveService class
 
 const client = new Client({
     intents: [
@@ -99,8 +100,6 @@ async function updateBotStatus() {
     }
 }
 
-const { removeBalancesForRemovedUsers, onUserLeave } = require('./removeBalanceOnLeave');
-
 client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
 
@@ -116,11 +115,10 @@ client.on('ready', async () => {
         // Other operations (commands, giveaways, etc.)
         await handleCommandsAndGiveaways(guildId);
 
-        // Call the function to remove balances of users not in the guild
-        await removeBalancesForRemovedUsers(client, db, guildId);  // Correct way to call the function
+        const userLeaveService = new UserLeaveService(client, db);
+        userLeaveService.onUserLeave(); 
+        userLeaveService.removeBalancesForRemovedUsers(guildId); 
 
-        // Set up listener for when users leave the guild
-        onUserLeave(client, db);  // Add this line to set up the listener
     } catch (error) {
         console.error('Error during bot startup:', error);
     }
