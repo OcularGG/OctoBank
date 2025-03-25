@@ -31,7 +31,8 @@ module.exports = {
             const uniqueUsers = lootSplitService.parseUsers();
             const individualShare = lootSplitService.calculateShares(remainingLoot, uniqueUsers);
 
-            const callbackId = await AuditLogService.getNextCallbackId();
+            const callbackIdDTO = await AuditLogService.getNextCallbackId();
+            const callbackId = callbackIdDTO.callbackId;
 
             const { userUpdates, auditLogs } = await lootSplitService.processLootSplit(uniqueUsers, individualShare, callbackId);
 

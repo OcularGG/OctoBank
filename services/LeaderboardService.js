@@ -1,5 +1,6 @@
 const User = require('../classes/User');
 const db = require('../db');
+const LeaderboardEntryDTO = require('../dtos/LeaderboardEntryDTO');
 class LeaderboardService {
     async getLeaderboard() {
         try {
@@ -12,11 +13,11 @@ class LeaderboardService {
             const leaderboard = await Promise.all(
                 rows.map(async (row, index) => {
                     const user = await User.fetchUser(row.username);
-                    return {
-                        rank: index + 1,
-                        username: user.getUsername(),
-                        balance: user.getBalance(),
-                    };
+                    return new LeaderboardEntryDTO(
+                        index + 1,
+                        user.username,
+                        user.balance
+                    );
                 })
             );
     

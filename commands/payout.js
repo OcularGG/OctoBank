@@ -1,7 +1,7 @@
-//payout.js
 const { SlashCommandBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const User = require('../classes/User');
 const AuditLogService = require('../services/AuditLogService');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -25,7 +25,7 @@ module.exports = {
 
         try {
             const user = await User.fetchUser(username);
-            const balance = user.getBalance();
+            const balance = user.balance;
 
             if (balance <= 0) {
                 return interaction.editReply({ content: `**${username}** has no OctoGold to pay out.` });
@@ -33,7 +33,8 @@ module.exports = {
 
             const formattedBalance = balance.toLocaleString();
 
-            const callbackId = await AuditLogService.getNextCallbackId();
+            const callbackIdDTO = await AuditLogService.getNextCallbackId();
+            const callbackId = callbackIdDTO.callbackId;
 
             const payoutEmbed = new EmbedBuilder()
                 .setColor('#ffbf00')
@@ -72,7 +73,23 @@ module.exports = {
                         const newBalance = balance - balance;
                         await User.updateBalance(username, newBalance);
 
-                        await AuditLogService.logAudit('payout', interaction.user.username, username, -balance, null, callbackId);
+                        const auditLogDTO = new AuditLogDTO(
+                            'payout',
+                            interaction.user.username,
+                            username,
+                            -balance,
+                            null,
+                            callbackId
+                        );
+
+                        await AuditLogService.logAudit(
+                            auditLogDTO.action,
+                            auditLogDTO.sender,
+                            auditLogDTO.target,
+                            auditLogDTO.amount,
+                            auditLogDTO.reason,
+                            auditLogDTO.callbackId
+                        );
 
                         const successEmbed = new EmbedBuilder()
                             .setColor('#00ff00')
@@ -88,7 +105,23 @@ module.exports = {
                     }
                 } else if (buttonInteraction.customId === 'no') {
                     try {
-                        await AuditLogService.logAudit('payout_cancelled', interaction.user.username, username, 0, 'Payout cancelled', callbackId);
+                        const auditLogDTO = new AuditLogDTO(
+                            'payout_cancelled',
+                            interaction.user.username,
+                            username,
+                            0,
+                            'Payout cancelled',
+                            callbackId
+                        );
+
+                        await AuditLogService.logAudit(
+                            auditLogDTO.action,
+                            auditLogDTO.sender,
+                            auditLogDTO.target,
+                            auditLogDTO.amount,
+                            auditLogDTO.reason,
+                            auditLogDTO.callbackId
+                        );
 
                         const cancelEmbed = new EmbedBuilder()
                             .setColor('#ff0000')

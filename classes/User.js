@@ -1,4 +1,5 @@
 const db = require('../db');
+const UserDTO = require('../dtos/UserDTO');
 
 class User {
     #username;
@@ -25,9 +26,9 @@ class User {
         const [rows] = await db.query('SELECT balance FROM coins WHERE username = ?', [username]);
         if (rows.length === 0) {
             await db.query('INSERT INTO coins (username, balance) VALUES (?, ?)', [username, 0]);
-            return new User(username, 0);
+            return new UserDTO(username, 0);
         }
-        return new User(username, rows[0].balance);
+        return new UserDTO(username, rows[0].balance);
     }
 
     static async updateBalance(username, newBalance) {

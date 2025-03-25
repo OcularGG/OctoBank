@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const AuditLogService = require('../services/AuditLogService');
 const User = require('../classes/User');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,6 +18,7 @@ module.exports = {
         const sender = interaction.user;
         const targetUser = interaction.options.getUser('user');
         const amount = interaction.options.getInteger('amount');
+        const reason = interaction.options.getString('reason');
         const targetUsername = targetUser.username;
 
         const tellerRole = interaction.guild.roles.cache.find(role => role.name === "Teller");
@@ -29,7 +31,7 @@ module.exports = {
         }
 
         const targetUserObj = await User.fetchUser(targetUsername);
-        const currentBalance = targetUserObj.getBalance();
+        const currentBalance = targetUserObj.balance;
 
         const formattedAmount = amount.toLocaleString();
 
@@ -70,9 +72,25 @@ module.exports = {
                 if (buttonInteraction.customId === 'yes') {
                     try {
                         const newBalance = currentBalance - amount;
-                        await User.updateBalance(targetUsername, newBalance)
+                        await User.updateBalance(targetUsername, newBalance);
 
-                        await AuditLogService.logAudit('buy', sender.username, targetUsername, -amount, null, callbackId);
+                        const auditLogDTO = new AuditLogDTO(
+                            'buy',
+                            sender.username,
+                            targetUsername,
+                            -amount,
+                            reason,
+                            callbackId
+                        );
+
+                        await AuditLogService.logAudit(
+                            auditLogDTO.action,
+                            auditLogDTO.sender,
+                            auditLogDTO.target,
+                            auditLogDTO.amount,
+                            auditLogDTO.reason,
+                            auditLogDTO.callbackId
+                        );
 
                         const formattedNewBalance = newBalance.toLocaleString();
 
@@ -101,12 +119,30 @@ module.exports = {
             return;
         }
 
-        const callbackId = await AuditLogService.getNextCallbackId();
+        const callbackIdDTO = await AuditLogService.getNextCallbackId();
+        const callbackId = callbackIdDTO.callbackId;
+        
         try {
             const newBalance = currentBalance - amount;
             await User.updateBalance(targetUsername, newBalance);
 
-            await AuditLogService.logAudit('buy', sender.username, targetUsername, -amount, null, callbackId);
+            const auditLogDTO = new AuditLogDTO(
+                'buy',
+                sender.username,
+                targetUsername,
+                -amount,
+                reason,
+                callbackId
+            );
+
+            await AuditLogService.logAudit(
+                auditLogDTO.action,
+                auditLogDTO.sender,
+                auditLogDTO.target,
+                auditLogDTO.amount,
+                auditLogDTO.reason,
+                auditLogDTO.callbackId
+            );
 
             const formattedNewBalance = newBalance.toLocaleString();
 

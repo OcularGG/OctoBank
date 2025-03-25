@@ -2,33 +2,15 @@ require('dotenv').config();  // Load environment variables from .env file
 const { Client, Intents, EmbedBuilder } = require('discord.js');
 const db = require('./db');  // Assuming you have a db.js file for database connection
 const cron = require('node-cron'); // For scheduling the giveaways
+const AuditLogService = require('./services/AuditLogService');
+const AuditLogDTO = require('./dtos/AuditLogDTO');
+const CallbackIdDTO = require('./dtos/CallbackIdDTO');
 
 // Prize pool values
 const PRIZES = [1000000, 750000, 500000, 250000];
 
 // Store the giveaway message ID globally (you can also store this in a database)
 let giveawayMessageId = null;
-
-// Function to log the action in the audit log
-async function logAudit(action, sender, target, amount, callbackId) {
-    const query = `
-        INSERT INTO auditlog (action, sender, target, amount, callback)
-        VALUES (?, ?, ?, ?, ?);
-    `;
-    try {
-        await db.query(query, [action, sender, target, amount, callbackId]);
-    } catch (error) {
-        console.error('Error logging audit:', error);
-    }
-}
-
-// Function to get the next callback ID
-async function getNextCallbackId() {
-    const query = 'SELECT MAX(callback) AS maxCallbackId FROM auditlog';
-    const [result] = await db.query(query);
-    const maxCallbackId = parseInt(result[0]?.maxCallbackId || '0', 10);
-    return maxCallbackId + 1; // Increment the callbackId by 1
-}
 
 // Function to choose a random winner from the reactions
 async function chooseWinner(reactions, message, prize) {
@@ -98,8 +80,9 @@ async function startGiveaways(client) {
                 await db.query('INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?', [winnerUsername, newRecipientBalance, newRecipientBalance]);
 
                 // Log the giveaway in the audit log
-                const callbackId = await getNextCallbackId();
-                await logAudit('giveaway', 'System', winnerUsername, prize, callbackId);
+                const callbackIdDTO = await AuditLogService.getNextCallbackId();
+                const callbackId = callbackIdDTO.callbackId;
+                await AuditLogService.logAudit('giveaway', 'System', winnerUsername, prize, callbackId);
 
                 // Send the embed message to announce the winner
                 const winnerEmbed = new EmbedBuilder()

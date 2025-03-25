@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../db');
 const AuditLogService = require('../services/AuditLogService');
 const User = require('../classes/User');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,7 +10,7 @@ module.exports = {
         .setDescription('Give or withdraw coins from multiple users')
         .addIntegerOption(option => option.setName('amount').setDescription('Amount of coins to send or withdraw').setRequired(true))
         .addStringOption(option => option.setName('users').setDescription('The users to send coins to or withdraw from (mention multiple users)').setRequired(true))
-        .addStringOption(option=> option.setName('reason').setDescription('Reason for the masspay').setRequired(true)),
+        .addStringOption(option => option.setName('reason').setDescription('Reason for the masspay').setRequired(true)),
     async execute(interaction) {
         await interaction.deferReply();
 
@@ -35,8 +36,8 @@ module.exports = {
 
         try {
 
-            const callbackId = await AuditLogService.getNextCallbackId(); 
-
+            const callbackIdDTO = await AuditLogService.getNextCallbackId();
+            const callbackId = callbackIdDTO.callbackId;
             const parsedCallbackId = parseInt(callbackId, 10);
 
             await connection.beginTransaction();
@@ -46,8 +47,7 @@ module.exports = {
 
                 try {
                     const recipient = await User.fetchUser(user.username);
-
-                    const newRecipientBalance = recipient.getBalance() + amount;
+                    const newRecipientBalance = recipient.balance + amount;
                     await User.updateBalance(user.username, newRecipientBalance);
 
                     usersList.push({
@@ -56,7 +56,23 @@ module.exports = {
                         balance: newRecipientBalance.toLocaleString(),
                     });
 
-                    await AuditLogService.logAudit(amount < 0 ? 'withdraw' : 'deposit', sender, user.username, amount, reason, parsedCallbackId,);
+                    const auditLogDTO = new AuditLogDTO(
+                        amount < 0 ? 'withdraw' : 'deposit',
+                        sender,
+                        user.username,
+                        amount,
+                        reason,
+                        parsedCallbackId
+                    );
+
+                    await AuditLogService.logAudit(
+                        auditLogDTO.action,
+                        auditLogDTO.sender,
+                        auditLogDTO.target,
+                        auditLogDTO.amount,
+                        auditLogDTO.reason,
+                        auditLogDTO.callbackId
+                    );
 
                 } catch (err) {
                     console.error(err);

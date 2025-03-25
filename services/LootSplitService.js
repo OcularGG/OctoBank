@@ -1,6 +1,7 @@
 const db = require('../db');
 const AuditLogService = require('./AuditLogService');
 const User = require('../classes/User');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 
 class LootSplitService {
     constructor(interaction, amount, repairCost, userInput) {
@@ -50,14 +51,30 @@ class LootSplitService {
     
             const username = targetUser.user.username;
             const user = await User.fetchUser(username);
-            const newBalance = user.getBalance() + individualShare;
+            const newBalance = user.balance + individualShare;
     
             await User.updateBalance(username, newBalance);
         
-            await AuditLogService.logAudit('lootsplit', this.sender.username, username, individualShare, null, callbackId);
+            const auditLogDTO = new AuditLogDTO(
+                'lootsplit',
+                this.sender.username,
+                username,
+                individualShare,
+                null,
+                callbackId
+            );
+
+            await AuditLogService.logAudit(
+                auditLogDTO.action,
+                auditLogDTO.sender,
+                auditLogDTO.target,
+                auditLogDTO.amount,
+                auditLogDTO.reason,
+                auditLogDTO.callbackId
+            );
     
             userUpdates.push({ username, coins: newBalance });
-            auditLogs.push({ action: 'lootsplit', sender: this.sender.username, target: username, amount: individualShare, callbackId });
+            auditLogs.push(auditLogDTO);
         }
     
         return { userUpdates, auditLogs };
@@ -66,10 +83,27 @@ class LootSplitService {
     async updateBankBalance(botShare, callbackId) {
         const bankUsername = 'OctoBank';
         const bankUser = await User.fetchUser(bankUsername);
-        const newBankBalance = bankUser.getBalance() + botShare;
+        const newBankBalance = bankUser.balance + botShare;
 
         await User.updateBalance(bankUsername, newBankBalance);
-        await AuditLogService.logAudit('lootsplit', this.sender.username, bankUsername, botShare, null, callbackId);
+
+        const auditLogDTO = new AuditLogDTO(
+            'lootsplit',
+            this.sender.username,
+            bankUsername,
+            botShare,
+            null,
+            callbackId
+        );
+
+        await AuditLogService.logAudit(
+            auditLogDTO.action,
+            auditLogDTO.sender,
+            auditLogDTO.target,
+            auditLogDTO.amount,
+            auditLogDTO.reason,
+            auditLogDTO.callbackId
+        );
 
         return { username: bankUsername, coins: newBankBalance };
     }

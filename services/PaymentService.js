@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const BalanceService = require('./BalanceService');
 const AuditLogService = require('./AuditLogService');
 const User = require('../classes/User');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 const db = require('../db');
 
 class PaymentService {
@@ -19,7 +20,7 @@ class PaymentService {
             }
 
             const recipientUser = await User.fetchUser(recipient.username);
-            const recipientBalance = recipientUser.getBalance();
+            const recipientBalance = recipientUser.balance;
 
             if (amount < 0 && recipientBalance + amount < 0) {
                 return interaction.editReply({ content: 'The recipient does not have enough coins to withdraw that amount.' });
@@ -28,10 +29,27 @@ class PaymentService {
             const newRecipientBalance = recipientBalance + amount;
 
             await User.updateBalance(recipient.username, newRecipientBalance);
+            
+            const callbackIdDTO = await AuditLogService.getNextCallbackId();
+            const callbackId = callbackIdDTO.callbackId;
 
-            const callbackId = await AuditLogService.getNextCallbackId();
+            const auditLogDTO = new AuditLogDTO(
+                amount < 0 ? 'withdraw' : 'deposit',
+                sender.username,
+                recipient.username,
+                amount,
+                reason,
+                callbackId
+            );
 
-            await AuditLogService.logAudit(amount < 0 ? 'withdraw' : 'deposit', sender.username, recipient.username, amount, reason, callbackId);
+            await AuditLogService.logAudit(
+                auditLogDTO.action,
+                auditLogDTO.sender,
+                auditLogDTO.target,
+                auditLogDTO.amount,
+                auditLogDTO.reason,
+                auditLogDTO.callbackId
+            );
 
             const actionType = amount < 0 ? 'withdraw' : 'deposit';
             const formattedAmount = Math.abs(amount).toLocaleString();
@@ -57,4 +75,5 @@ class PaymentService {
         }
     }
 }
+
 module.exports = PaymentService;

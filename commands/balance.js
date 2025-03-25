@@ -16,7 +16,7 @@ module.exports = {
             await interaction.deferReply({ flags: 64 });
             const targetUser = interaction.options.getUser('user') || interaction.user;
             const user = await User.fetchUser(targetUser.username);
-            const balance = user.getBalance();
+            const balance = user.balance;
             const formattedBalance = balance.toLocaleString();
             const embed = await BalanceService.createBalanceEmbed(interaction, targetUser, formattedBalance);
 

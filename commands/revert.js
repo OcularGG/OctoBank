@@ -1,7 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const AuditLogService = require('../services/AuditLogService');
 const User = require('../classes/User');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 const db = require('../db');
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('revert')
@@ -37,7 +39,7 @@ module.exports = {
                 await logReversionAction(interaction.user.username, target, amount, callbackId);
 
                 const targetUser = await User.fetchUser(target);
-                const currentBalance = targetUser.getBalance();
+                const currentBalance = targetUser.balance;
 
                 embedContent.push(`**Target:** ${target}\n**Action:** Reverted <:OctoGold:1324817815470870609> ${Math.abs(amount).toLocaleString()} OctoGold\n**New Balance:** <:OctoGold:1324817815470870609> ${currentBalance.toLocaleString()} OctoGold\n`);
             }
@@ -85,17 +87,34 @@ module.exports = {
 
 async function handleRevert(target, amount, callbackId, interaction) {
     const targetUser = await User.fetchUser(target);
-    const currentBalance = targetUser.getBalance();
+    const currentBalance = targetUser.balance;
     const newBalance = currentBalance + amount;
 
     await User.updateBalance(target, newBalance);
 }
 
 async function logReversionAction(sender, target, amount, callbackId) {
-    const newCallbackId = await AuditLogService.getNextCallbackId();
+    const callbackIdDTO = await AuditLogService.getNextCallbackId();
+    const newCallbackId = callbackIdDTO.callbackId;
+
+    const auditLogDTO = new AuditLogDTO(
+        'revert',
+        sender,
+        target,
+        -amount,
+        null,
+        newCallbackId
+    );
 
     try {
-        await AuditLogService.logAudit('revert', sender, target, -amount, null, newCallbackId);
+        await AuditLogService.logAudit(
+            auditLogDTO.action,
+            auditLogDTO.sender,
+            auditLogDTO.target,
+            auditLogDTO.amount,
+            auditLogDTO.reason,
+            auditLogDTO.callbackId
+        );
     } catch (error) {
         console.error('Error logging reversion action:', error);
     }
