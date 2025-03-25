@@ -29,27 +29,16 @@ class PaymentService {
             const newRecipientBalance = recipientBalance + amount;
 
             await User.updateBalance(recipient.username, newRecipientBalance);
-            
-            const callbackIdDTO = await AuditLogService.getNextCallbackId();
-            const callbackId = callbackIdDTO.callbackId;
 
-            const auditLogDTO = new AuditLogDTO(
+            const auditLogDTO = await AuditLogDTO.create(
                 amount < 0 ? 'withdraw' : 'deposit',
                 sender.username,
                 recipient.username,
                 amount,
-                reason,
-                callbackId
+                reason
             );
 
-            await AuditLogService.logAudit(
-                auditLogDTO.action,
-                auditLogDTO.sender,
-                auditLogDTO.target,
-                auditLogDTO.amount,
-                auditLogDTO.reason,
-                auditLogDTO.callbackId
-            );
+            await auditLogDTO.log();
 
             const actionType = amount < 0 ? 'withdraw' : 'deposit';
             const formattedAmount = Math.abs(amount).toLocaleString();
@@ -61,7 +50,7 @@ class PaymentService {
                 .setColor('#ffbf00')
                 .setDescription(`\n${actionMessage}\n\nReason: **${reason}**`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `ID: ${callbackId} | Processed by: ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
+                .setFooter({ text: `ID: ${auditLogDTO.callbackId} | Processed by: ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
             return interaction.editReply({ embeds: [embed] });
