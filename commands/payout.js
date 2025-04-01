@@ -1,7 +1,5 @@
 const { SlashCommandBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const User = require('../classes/User');
-const AuditLogService = require('../services/AuditLogService');
-const AuditLogDTO = require('../dtos/AuditLogDTO');
+const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,8 +22,9 @@ module.exports = {
         const username = targetUser.username;
 
         try {
-            const user = await User.fetchUser(username);
-            const balance = user.balance;
+            // Fetch user balance from the server
+            const balanceResponse = await axios.post('http://localhost:3000/api/balance', { username });
+            const balance = balanceResponse.data.balance;
 
             if (balance <= 0) {
                 return interaction.editReply({ content: `**${username}** has no OctoGold to pay out.` });
@@ -33,9 +32,7 @@ module.exports = {
 
             const formattedBalance = balance.toLocaleString();
 
-            const callbackIdDTO = await AuditLogService.getNextCallbackId();
-            const callbackId = callbackIdDTO.callbackId;
-
+            // Create the confirmation embed
             const payoutEmbed = new EmbedBuilder()
                 .setColor('#ffbf00')
                 .setTitle('Confirm Payout')
@@ -70,69 +67,37 @@ module.exports = {
 
                 if (buttonInteraction.customId === 'yes') {
                     try {
-                        const newBalance = balance - balance;
-                        await User.updateBalance(username, newBalance);
-
-                        const auditLogDTO = new AuditLogDTO(
-                            'payout',
-                            interaction.user.username,
+                        // Send a POST request to the /api/payout endpoint
+                        const payoutResponse = await axios.post('http://localhost:3000/api/payout', {
                             username,
-                            -balance,
-                            null,
-                            callbackId
-                        );
+                            balance,
+                            senderUsername: interaction.user.username,
+                        });
 
-                        await AuditLogService.logAudit(
-                            auditLogDTO.action,
-                            auditLogDTO.sender,
-                            auditLogDTO.target,
-                            auditLogDTO.amount,
-                            auditLogDTO.reason,
-                            auditLogDTO.callbackId
-                        );
+                        const result = payoutResponse.data;
+
+                        if (!result.success) {
+                            return interaction.editReply({ content: `❌ Payout failed: ${result.message}`, components: [] });
+                        }
 
                         const successEmbed = new EmbedBuilder()
                             .setColor('#00ff00')
                             .setTitle('Payout Complete')
                             .setDescription(`**${username}** has successfully received their payout of <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold. Their balance is now cleared.`)
-                            .setFooter({ text: `Transaction completed by ${interaction.user.username} | Callback ID: ${callbackId}` });
+                            .setFooter({ text: `Transaction completed by ${interaction.user.username} | Callback ID: ${result.callbackId}` });
 
                         await interaction.editReply({ embeds: [successEmbed], components: [] });
-
                     } catch (error) {
                         console.error('Error processing payout:', error);
-                        return interaction.editReply({ content: 'An error occurred while processing the payout. Please try again later.' });
+                        return interaction.editReply({ content: 'An error occurred while processing the payout. Please try again later.', components: [] });
                     }
                 } else if (buttonInteraction.customId === 'no') {
-                    try {
-                        const auditLogDTO = new AuditLogDTO(
-                            'payout_cancelled',
-                            interaction.user.username,
-                            username,
-                            0,
-                            'Payout cancelled',
-                            callbackId
-                        );
+                    const cancelEmbed = new EmbedBuilder()
+                        .setColor('#ff0000')
+                        .setTitle('Payout Cancelled')
+                        .setDescription(`The payout to **${username}** has been cancelled.`);
 
-                        await AuditLogService.logAudit(
-                            auditLogDTO.action,
-                            auditLogDTO.sender,
-                            auditLogDTO.target,
-                            auditLogDTO.amount,
-                            auditLogDTO.reason,
-                            auditLogDTO.callbackId
-                        );
-
-                        const cancelEmbed = new EmbedBuilder()
-                            .setColor('#ff0000')
-                            .setTitle('Payout Cancelled')
-                            .setDescription(`The payout to **${username}** has been cancelled.`);
-
-                        await interaction.editReply({ embeds: [cancelEmbed], components: [] });
-                    } catch (error) {
-                        console.error('Error handling cancellation:', error);
-                        return interaction.editReply({ content: 'An error occurred while handling the cancellation. Please try again later.' });
-                    }
+                    await interaction.editReply({ embeds: [cancelEmbed], components: [] });
                 }
 
                 collector.stop();

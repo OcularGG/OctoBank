@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const User = require('../classes/User');
-const BalanceService = require('../services/BalanceService');
+const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,12 +14,24 @@ module.exports = {
         try {
             await interaction.deferReply({ flags: 64 });
             const targetUser = interaction.options.getUser('user') || interaction.user;
-            const user = await User.fetchUser(targetUser.username);
-            const balance = user.balance;
-            const formattedBalance = balance.toLocaleString();
-            const embed = await BalanceService.createBalanceEmbed(interaction, targetUser, formattedBalance);
 
-            return interaction.editReply({ embeds: [embed], flags: 64 });
+            // Make a POST request to the server to get the balance
+            const response = await axios.post('http://localhost:3000/api/balance', {
+                username: targetUser.username,
+            });
+
+            const balance = response.data.balance;
+            const formattedBalance = balance.toLocaleString();
+
+            // Create the embed directly in the command
+            const embed = new EmbedBuilder()
+            .setColor('#ffbf00')
+            .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold.`)
+            .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
+            .setFooter({ text: `Balance requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
+            .setTimestamp();
+
+        return interaction.editReply({ embeds: [embed], flags: 64 });
         } catch (error) {
             console.error('Error in balance command:', error);
 

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const LeaderboardService = require('../services/LeaderboardService'); // Import the service
+const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,21 +8,25 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            const leaderboardService = new LeaderboardService();
-            const leaderboard = await leaderboardService.getLeaderboard(interaction.client.db);
+            // Make a POST request to the server to get the leaderboard data
+            const response = await axios.post('http://localhost:3000/api/leaderboard');
 
-            if (leaderboard.length === 0) {
+            const leaderboard = response.data.leaderboard;
+
+            if (!leaderboard || leaderboard.length === 0) {
                 return await interaction.reply({
                     content: 'No users found in the leaderboard.',
                     ephemeral: true,
                 });
             }
 
+            // Build the leaderboard content
             let leaderboardContents = '';
             leaderboard.forEach(user => {
                 leaderboardContents += `${user.rank}. **${user.username}**: <:OctoGold:1324817815470870609> **${user.balance.toLocaleString()}** OctoGold\n`;
             });
 
+            // Create the embed
             const leaderboardEmbed = new EmbedBuilder()
                 .setColor(0xffe600)
                 .setTitle('Leaderboard - Top 10 Users')
@@ -32,6 +36,7 @@ module.exports = {
                     iconURL: interaction.user.avatarURL(),
                 });
 
+            // Send the embed as a reply
             await interaction.reply({ embeds: [leaderboardEmbed] });
 
         } catch (error) {

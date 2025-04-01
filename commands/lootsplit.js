@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const LootSplitService = require('../services/LootSplitService');
-const AuditLogService = require('../services/AuditLogService');
+const axios = require('axios');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,44 +10,68 @@ module.exports = {
         .addStringOption(option => option.setName('users').setDescription('Users to split the loot with').setRequired(true)),
 
     async execute(interaction) {
+        await interaction.deferReply();
+
+        const amount = interaction.options.getInteger('amount');
+        const repairCost = interaction.options.getInteger('repaircost');
+        const userInput = interaction.options.getString('users');
+
+        const tellerRole = interaction.guild.roles.cache.find(role => role.name === "Teller");
+        if (!tellerRole || !interaction.member.roles.cache.has(tellerRole.id)) {
+            return interaction.editReply({ content: 'You must have the "Teller" role to use this command.' });
+        }
+
         try {
-            await interaction.deferReply();
+            // Inline logic to parse users from the input
+            const mentionedUsers = userInput.match(/<@!?(\d+)>/g)?.map((mention) => mention.replace(/[<@!>]/g, '')) || [];
+            const parsedUserIds = [...new Set(mentionedUsers)]; // Deduplicate user IDs
 
-            const amount = interaction.options.getInteger('amount');
-            const repairCost = interaction.options.getInteger('repaircost');
-            const userInput = interaction.options.getString('users');
-
-            const tellerRole = interaction.guild.roles.cache.find(role => role.name === "Teller");
-            if (!tellerRole || !interaction.member.roles.cache.has(tellerRole.id)) {
-                return interaction.editReply({ content: 'You must have the "Teller" role to use this command.' });
+            if (parsedUserIds.length === 0) {
+                return interaction.editReply({ content: 'No valid users mentioned to split the loot with!' });
             }
 
-            const lootSplitService = new LootSplitService(interaction, amount, repairCost, userInput);
+            // Convert user IDs to usernames
+            const parsedUsers = await Promise.all(
+                parsedUserIds.map(async (userId) => {
+                    const targetUser = await interaction.guild.members.fetch(userId);
+                    return targetUser.user.username;
+                })
+            );
 
-            const { valid, remainingLoot, message } = lootSplitService.validateLoot();
-            if (!valid) return interaction.editReply(message);
+            // Make a POST request to the /api/lootsplit endpoint
+            const response = await axios.post('http://localhost:3000/api/lootsplit', {
+                amount,
+                repairCost,
+                userInput: parsedUsers, // Pass the usernames instead of IDs
+                senderUsername: interaction.user.username,
+            });
 
-            const uniqueUsers = lootSplitService.parseUsers();
-            const individualShare = lootSplitService.calculateShares(remainingLoot, uniqueUsers);
+            const result = response.data;
 
-            const callbackIdDTO = await AuditLogService.getNextCallbackId();
-            const callbackId = callbackIdDTO.callbackId;
+            if (!result.success) {
+                return interaction.editReply({ content: `❌ Loot split failed: ${result.message}` });
+            }
 
-            const { userUpdates, auditLogs } = await lootSplitService.processLootSplit(uniqueUsers, individualShare, callbackId);
+            // Generate embed content using the returned data
+            const embedContent = generateEmbedContent(
+                result.userUpdates,
+                result.bankUpdate,
+                amount,
+                repairCost,
+                result.remainingLoot,
+                result.individualShare,
+                result.numUsers,
+                result.callbackId
+            );
 
-            const botShare = Math.floor(amount * 0.2);
-            const bankUpdate = await lootSplitService.updateBankBalance(botShare, callbackId);
-
-            const embedContent = generateEmbedContent(userUpdates, bankUpdate, amount, repairCost, remainingLoot, individualShare, uniqueUsers.length, callbackId);
-            await sendEmbeds(interaction, embedContent, callbackId);
-
+            // Send the embeds
+            await sendEmbeds(interaction, embedContent, result.callbackId);
         } catch (error) {
-            console.error('Error executing loot split command:', error);
-            await interaction.editReply({ content: 'There was an error processing your request.' });
+            console.error('Error processing loot split:', error);
+            return interaction.editReply({ content: 'There was an error processing the loot split. Please try again later.' });
         }
     },
 };
-
 
 function generateEmbedContent(userUpdates, bankUpdate, amount, repairCost, userShare, individualShare, numUsers, callbackId) {
     const lootsplitDecemil = (userShare / amount) * 100;

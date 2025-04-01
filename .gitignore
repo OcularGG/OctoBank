@@ -1,3 +1,4 @@
 .env
-secrets.env 
+secrets.env
 db.js
+node_modules/
