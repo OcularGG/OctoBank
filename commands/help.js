@@ -3,14 +3,14 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 function createHelpEmbed(description, bot, user) {
     return new EmbedBuilder()
         .setColor('#ffbf00')
-        .setDescription(description)  // Only set the description
+        .setDescription(description)
         .setAuthor({
-            name: bot.user.username,  // Bot's name
-            iconURL: bot.user.displayAvatarURL(),  // Bot's avatar
+            name: bot.user.username,
+            iconURL: bot.user.displayAvatarURL()
         })
         .setFooter({
-            text: `Requested by: ${user.username}`,  // User who requested the help
-            iconURL: user.displayAvatarURL()  // User's avatar in the footer
+            text: `Requested by: ${user.username}`,
+            iconURL: user.displayAvatarURL()
         })
         .setTimestamp();
 }
@@ -21,7 +21,6 @@ module.exports = {
         .setDescription('Displays the list of available commands and their descriptions'),
 
     async execute(interaction) {
-        // General Command Help
         const generalHelp = `**/balance**: Check your current OctoGold balance\n` +
                             `**/transfer**: Transfer OctoGold between users\n` +
                             `**/pay**: Pay or withdraw OctoGold to a user (Teller only)\n` +
@@ -30,10 +29,8 @@ module.exports = {
                             `**/payout**: Pay out OctoGold to a user (Teller only)\n` +
                             `**/lootsplit**: Lootsplit calculator (Teller only)`;
 
-        // Create the embed with no title, just description, and include the bot's name, avatar, and user's avatar in the footer
         const helpEmbed = createHelpEmbed(generalHelp, interaction.client, interaction.user);
 
-        // Send the help embed with all command info
         interaction.reply({ embeds: [helpEmbed] });
     }
 };

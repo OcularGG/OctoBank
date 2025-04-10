@@ -1,34 +1,16 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
-const db = require('../db');
-
-
-async function logAudit(action, sender, target, amount, callbackId) {
-    const query = `
-        INSERT INTO auditlog (action, sender, target, amount, callback)
-        VALUES (?, ?, ?, ?, ?);
-    `;
-    try {
-        await db.query(query, [action, sender, target, amount, callbackId]);
-    } catch (error) {
-        console.error('Error logging audit:', error);
-    }
-}
-
-
-async function getNextCallbackId() {
-    const query = 'SELECT MAX(callback) AS maxCallbackId FROM auditlog';
-    const [result] = await db.query(query);
-    const maxCallbackId = parseInt(result[0]?.maxCallbackId || '0', 10);
-    return maxCallbackId + 1; 
-}
+const AuditLogService = require('../services/AuditLogService');
+const User = require('../classes/User');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('buy')
         .setDescription('Allow a user to purchase an item using their OctoGold.')
         .addUserOption(option => option.setName('user').setDescription('User to buy for').setRequired(true))
-        .addIntegerOption(option => option.setName('amount').setDescription('Amount of OctoGold to spend').setRequired(true)),
-
+        .addIntegerOption(option => option.setName('amount').setDescription('Amount of OctoGold to spend').setRequired(true))
+        .addStringOption(option => option.setName('reason').setDescription('What is this for?').setRequired(true)),
+    
     async execute(interaction) {
 
         await interaction.deferReply();
@@ -36,6 +18,7 @@ module.exports = {
         const sender = interaction.user;
         const targetUser = interaction.options.getUser('user');
         const amount = interaction.options.getInteger('amount');
+        const reason = interaction.options.getString('reason');
         const targetUsername = targetUser.username;
 
         const tellerRole = interaction.guild.roles.cache.find(role => role.name === "Teller");
@@ -43,20 +26,17 @@ module.exports = {
             return interaction.editReply({ content: 'You must have the "Teller" role to use this command.' });
         }
 
-
         if (isNaN(amount) || amount <= 0) {
             return interaction.editReply('Invalid command usage! Example: `/buy @user 100`');
         }
 
-        const [recipientRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [targetUsername]);
-        const currentBalance = recipientRows.length > 0 ? recipientRows[0].balance : 0;
+        const targetUserObj = await User.fetchUser(targetUsername);
+        const currentBalance = targetUserObj.balance;
 
         const formattedAmount = amount.toLocaleString();
 
- 
         if (currentBalance < amount) {
             const amountToGoNegative = (amount - currentBalance).toLocaleString();
-
 
             const warningEmbed = new EmbedBuilder()
                 .setColor('#ff0000')
@@ -87,15 +67,30 @@ module.exports = {
             });
 
             collector.on('collect', async (buttonInteraction) => {
-                const callbackId = await getNextCallbackId();
+                const callbackId = await AuditLogService.getNextCallbackId();
 
                 if (buttonInteraction.customId === 'yes') {
                     try {
-
                         const newBalance = currentBalance - amount;
-                        await db.query('INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?', [targetUsername, newBalance, newBalance]);
+                        await User.updateBalance(targetUsername, newBalance);
 
-                        await logAudit('buy', sender.username, targetUsername, -amount, callbackId);
+                        const auditLogDTO = new AuditLogDTO(
+                            'buy',
+                            sender.username,
+                            targetUsername,
+                            -amount,
+                            reason,
+                            callbackId
+                        );
+
+                        await AuditLogService.logAudit(
+                            auditLogDTO.action,
+                            auditLogDTO.sender,
+                            auditLogDTO.target,
+                            auditLogDTO.amount,
+                            auditLogDTO.reason,
+                            auditLogDTO.callbackId
+                        );
 
                         const formattedNewBalance = newBalance.toLocaleString();
 
@@ -124,13 +119,30 @@ module.exports = {
             return;
         }
 
-        const callbackId = await getNextCallbackId();
+        const callbackIdDTO = await AuditLogService.getNextCallbackId();
+        const callbackId = callbackIdDTO.callbackId;
+        
         try {
             const newBalance = currentBalance - amount;
-            await db.query('INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?', [targetUsername, newBalance, newBalance]);
+            await User.updateBalance(targetUsername, newBalance);
 
-            await logAudit('buy', sender.username, targetUsername, -amount, callbackId);
+            const auditLogDTO = new AuditLogDTO(
+                'buy',
+                sender.username,
+                targetUsername,
+                -amount,
+                reason,
+                callbackId
+            );
 
+            await AuditLogService.logAudit(
+                auditLogDTO.action,
+                auditLogDTO.sender,
+                auditLogDTO.target,
+                auditLogDTO.amount,
+                auditLogDTO.reason,
+                auditLogDTO.callbackId
+            );
 
             const formattedNewBalance = newBalance.toLocaleString();
 

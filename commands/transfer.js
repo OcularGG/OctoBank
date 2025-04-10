@@ -1,24 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const db = require('../db');
-
-async function logAudit(action, sender, target, amount, callbackId) {
-    const query = `
-        INSERT INTO auditlog (action, sender, target, amount, callback)
-        VALUES (?, ?, ?, ?, ?);
-    `;
-    try {
-        await db.query(query, [action, sender, target, amount, callbackId]);
-    } catch (error) {
-        console.error('Error logging audit:', error);
-    }
-}
-
-async function getNextCallbackId() {
-    const query = 'SELECT MAX(callback) AS maxCallbackId FROM auditlog';
-    const [result] = await db.query(query);
-    const maxCallbackId = parseInt(result[0]?.maxCallbackId || '0', 10);
-    return maxCallbackId + 1;
-}
+const User = require('../classes/User');
+const AuditLogService = require('../services/AuditLogService');
+const AuditLogDTO = require('../dtos/AuditLogDTO');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -33,7 +16,7 @@ module.exports = {
         .addUserOption(option =>
             option
                 .setName('recipient')
-                .setDescription('Who are you transfering to?')
+                .setDescription('Who are you transferring to?')
                 .setRequired(true)
         ),
 
@@ -46,49 +29,79 @@ module.exports = {
             const recipientMember = interaction.options.getUser('recipient');
 
             if (amount <= 0) {
-                return interaction.editReply('You can only Transfer positive amounts.');
+                return interaction.editReply('You can only transfer positive amounts.');
             }
 
-            if (tipper == recipientMember){
-                return interaction.editReply('You cant transfer money to yourself.');
+            if (tipper === recipientMember) {
+                return interaction.editReply('You cannot transfer money to yourself.');
             }
 
-            const [transferRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [tipper.username]);
-            const transferBalance = transferRows.length > 0 ? transferRows[0].balance : 0;
+            // Fetch the User instances for both the tipper and recipient
+            const tipperUser = await User.fetchUser(tipper.username);
+            const recipientUser = await User.fetchUser(recipientMember.username);
 
+            const transferBalance = tipperUser.balance;
             if (transferBalance < amount) {
-                return interaction.editReply('You dont have enough money to do this transfer');
+                return interaction.editReply('You don\'t have enough OctoGold to complete the transfer.');
             }
 
-            const [recipientRows] = await db.query('SELECT balance FROM coins WHERE username = ?', [recipientMember.username]);
-            const recipientBalance = recipientRows.length > 0 ? recipientRows[0].balance : 0;
+            const newTipperBalance = transferBalance - amount;
+            const newRecipientBalance = recipientUser.balance + amount;
 
-            const newTransferBalance = transferBalance - amount;
-            const newRecipientBalance = recipientBalance + amount;
+            await User.updateBalance(tipper.username, newTipperBalance);
+            await User.updateBalance(recipientMember.username, newRecipientBalance);
 
-            await db.query(
-                'INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?',
-                [tipper.username, newTransferBalance, newTransferBalance]
+            const callbackIdDTO = await AuditLogService.getNextCallbackId();
+            const callbackId = callbackIdDTO.callbackId;
+
+            const tipperAuditLogDTO = new AuditLogDTO(
+                'Transfer',
+                tipper.username,
+                recipientMember.username,
+                amount,
+                'Transferred',
+                callbackId
             );
-            await db.query(
-                'INSERT INTO coins (username, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = ?',
-                [recipientMember.username, newRecipientBalance, newRecipientBalance]
+
+            const recipientAuditLogDTO = new AuditLogDTO(
+                'Transfer',
+                recipientMember.username,
+                tipper.username,
+                -amount,
+                'Received',
+                callbackId
             );
 
-            const callbackId = await getNextCallbackId();
-            await logAudit('Transfer', tipper.username, recipientMember.username, amount, callbackId);
+            await AuditLogService.logAudit(
+                tipperAuditLogDTO.action,
+                tipperAuditLogDTO.sender,
+                tipperAuditLogDTO.target,
+                tipperAuditLogDTO.amount,
+                tipperAuditLogDTO.reason,
+                tipperAuditLogDTO.callbackId
+            );
 
+            await AuditLogService.logAudit(
+                recipientAuditLogDTO.action,
+                recipientAuditLogDTO.sender,
+                recipientAuditLogDTO.target,
+                recipientAuditLogDTO.amount,
+                recipientAuditLogDTO.reason,
+                recipientAuditLogDTO.callbackId
+            );
+
+            // Prepare the embed response
             const embed = new EmbedBuilder()
                 .setColor('#ffbf00')
                 .setTitle('Transfer Confirmation')
                 .setDescription(
-                    `**${tipper.username}** has transfered ` +
+                    `**${tipper.username}** has transferred ` +
                     `<:OctoGold:1324817815470870609> **${amount.toLocaleString()}** OctoGold to **${recipientMember.username}**.`
                 )
                 .addFields(
                     { 
                         name: `${tipper.username}'s New Balance`, 
-                        value: `<:OctoGold:1324817815470870609> **${newTransferBalance.toLocaleString()}** OctoGold`, 
+                        value: `<:OctoGold:1324817815470870609> **${newTipperBalance.toLocaleString()}** OctoGold`, 
                         inline: true 
                     },
                     { 
