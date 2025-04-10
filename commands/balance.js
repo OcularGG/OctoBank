@@ -23,7 +23,6 @@ module.exports = {
             const balance = response.data.balance;
             const formattedBalance = balance.toLocaleString();
 
-            // Create the embed directly in the command
             const embed = new EmbedBuilder()
             .setColor('#ffbf00')
             .setDescription(`[**OctoBank**](https://octobank.ocular-gaming.net/)\n\n**${targetUser.username}** has <:OctoGold:1324817815470870609> **${formattedBalance}** OctoGold.`)

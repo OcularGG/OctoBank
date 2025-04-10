@@ -22,7 +22,6 @@ module.exports = {
         }
 
         try {
-            // Inline logic to parse users from the input
             const mentionedUsers = userInput.match(/<@!?(\d+)>/g)?.map((mention) => mention.replace(/[<@!>]/g, '')) || [];
             const parsedUserIds = [...new Set(mentionedUsers)]; // Deduplicate user IDs
 
@@ -30,7 +29,6 @@ module.exports = {
                 return interaction.editReply({ content: 'No valid users mentioned to split the loot with!' });
             }
 
-            // Convert user IDs to usernames
             const parsedUsers = await Promise.all(
                 parsedUserIds.map(async (userId) => {
                     const targetUser = await interaction.guild.members.fetch(userId);
@@ -38,11 +36,10 @@ module.exports = {
                 })
             );
 
-            // Make a POST request to the /api/lootsplit endpoint
             const response = await axios.post('http://localhost:3000/api/lootsplit', {
                 amount,
                 repairCost,
-                userInput: parsedUsers, // Pass the usernames instead of IDs
+                userInput: parsedUsers,
                 senderUsername: interaction.user.username,
             });
 
@@ -52,7 +49,6 @@ module.exports = {
                 return interaction.editReply({ content: `❌ Loot split failed: ${result.message}` });
             }
 
-            // Generate embed content using the returned data
             const embedContent = generateEmbedContent(
                 result.userUpdates,
                 result.bankUpdate,
@@ -64,7 +60,6 @@ module.exports = {
                 result.callbackId
             );
 
-            // Send the embeds
             await sendEmbeds(interaction, embedContent, result.callbackId);
         } catch (error) {
             console.error('Error processing loot split:', error);

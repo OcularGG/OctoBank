@@ -21,7 +21,6 @@ module.exports = {
         .setDescription('Displays the list of available commands and their descriptions'),
 
     async execute(interaction) {
-        // General Command Help
         const generalHelp = `**/balance**: Check your current OctoGold balance\n` +
                             `**/transfer**: Transfer OctoGold between users\n` +
                             `**/pay**: Pay or withdraw OctoGold to a user (Teller only)\n` +

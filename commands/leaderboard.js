@@ -8,7 +8,6 @@ module.exports = {
 
     async execute(interaction) {
         try {
-            // Make a POST request to the server to get the leaderboard data
             const response = await axios.post('http://localhost:3000/api/leaderboard');
 
             const leaderboard = response.data.leaderboard;
@@ -20,7 +19,7 @@ module.exports = {
                 });
             }
 
-            // Build the leaderboard content
+            //Build the leaderboard content
             let leaderboardContents = '';
             leaderboard.forEach(user => {
                 leaderboardContents += `${user.rank}. **${user.username}**: <:OctoGold:1324817815470870609> **${user.balance.toLocaleString()}** OctoGold\n`;
@@ -36,7 +35,6 @@ module.exports = {
                     iconURL: interaction.user.avatarURL(),
                 });
 
-            // Send the embed as a reply
             await interaction.reply({ embeds: [leaderboardEmbed] });
 
         } catch (error) {

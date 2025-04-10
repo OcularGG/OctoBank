@@ -22,7 +22,6 @@ module.exports = {
         const username = targetUser.username;
 
         try {
-            // Fetch user balance from the server
             const balanceResponse = await axios.post('http://localhost:3000/api/balance', { username });
             const balance = balanceResponse.data.balance;
 
@@ -32,7 +31,6 @@ module.exports = {
 
             const formattedBalance = balance.toLocaleString();
 
-            // Create the confirmation embed
             const payoutEmbed = new EmbedBuilder()
                 .setColor('#ffbf00')
                 .setTitle('Confirm Payout')
@@ -67,7 +65,6 @@ module.exports = {
 
                 if (buttonInteraction.customId === 'yes') {
                     try {
-                        // Send a POST request to the /api/payout endpoint
                         const payoutResponse = await axios.post('http://localhost:3000/api/payout', {
                             username,
                             balance,

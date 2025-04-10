@@ -45,18 +45,15 @@ module.exports = {
                 return interaction.editReply('You don\'t have enough OctoGold to complete the transfer.');
             }
 
-            // Update the balances
             const newTipperBalance = transferBalance - amount;
             const newRecipientBalance = recipientUser.balance + amount;
 
-            // Set the new balances using the User class method
             await User.updateBalance(tipper.username, newTipperBalance);
             await User.updateBalance(recipientMember.username, newRecipientBalance);
 
             const callbackIdDTO = await AuditLogService.getNextCallbackId();
             const callbackId = callbackIdDTO.callbackId;
 
-            // Log the action in the audit log using AuditLogDTO
             const tipperAuditLogDTO = new AuditLogDTO(
                 'Transfer',
                 tipper.username,

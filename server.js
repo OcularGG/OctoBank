@@ -2,13 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const User = require('./classes/User'); // Import the User class
 const LeaderboardService = require('./services/LeaderboardService'); // Import the LeaderboardService
-const PaymentService = require('./services/PaymentService'); // Assuming you have a PaymentService
+const PaymentService = require('./services/PaymentService'); // Import the PaymentService
 const app = express(); // Initialize the Express application
 const AuditLogService = require('./services/AuditLogService'); // Import the AuditLogService
 const AuditLogDTO = require('./dtos/AuditLogDTO'); // Import the AuditLogDTO
 const LootSplitService = require('./services/LootSplitService'); // Import the LootSplitService
 app.use(express.json()); // Parse JSON request bodies
-app.use(cors()); // Enable CORS if needed for frontend communication
+app.use(cors()); // Enable CORS
 
 // Endpoint to fetch user balance
 app.post('/api/balance', async (req, res) => {
@@ -21,7 +21,6 @@ app.post('/api/balance', async (req, res) => {
             return res.status(400).json({ error: 'Username is required' });
         }
 
-        // Call the User service directly
         const user = await User.fetchUser(username);
 
         console.log('Fetched user from database:', user);
@@ -75,7 +74,7 @@ app.post('/api/pay', async (req, res) => {
 
         // Call the PaymentService to process the payment
         const result = await PaymentService.processPayment(
-            { guild: { roles: { cache: new Map() } }, member: { roles: { cache: new Map() } } }, // Mock interaction object
+            { guild: { roles: { cache: new Map() } }, member: { roles: { cache: new Map() } } },
             amount,
             { username: senderUsername },
             { username: recipientUsername },
@@ -83,7 +82,7 @@ app.post('/api/pay', async (req, res) => {
         );
 
         if (result.success) {
-            console.log('Fetched from database:', result);  // Log successful payment result
+            console.log('Fetched from database:', result); 
             return res.status(200).json({
                 success: true,
                 message: 'Payment processed successfully.',
@@ -93,7 +92,7 @@ app.post('/api/pay', async (req, res) => {
                 newRecipientBalance: result.newRecipientBalance,
             });
         } else {
-            console.log('Payment failed:', result.message);  // Log when payment fails
+            console.log('Payment failed:', result.message);
             return res.status(400).json({ success: false, message: result.message });
         }
     } catch (error) {
@@ -101,7 +100,7 @@ app.post('/api/pay', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal server error.' });
     }
 });
-
+// Endpoint to process payout using updateBalance User method
 app.post('/api/payout', async (req, res) => {
     try {
         const { username, balance, senderUsername } = req.body;
@@ -112,16 +111,13 @@ app.post('/api/payout', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Missing required fields.' });
         }
 
-        // Fetch the user and validate balance
         const user = await User.fetchUser(username);
         if (!user || user.balance !== balance) {
             return res.status(400).json({ success: false, message: 'User balance mismatch or user not found.' });
         }
 
-        // Clear the user's balance
         await User.updateBalance(username, 0);
 
-        // Log the transaction
         const callbackIdDTO = await AuditLogService.getNextCallbackId();
         const callbackId = callbackIdDTO.callbackId;
 
@@ -149,7 +145,7 @@ app.post('/api/payout', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal server error.' });
     }
 });
-
+//Call the LootSplitService to process the loot split
 app.post('/api/lootsplit', async (req, res) => {
     try {
         const { amount, repairCost, userInput, senderUsername } = req.body;
