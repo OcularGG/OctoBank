@@ -7,19 +7,10 @@
   <h3 align="center">OctoBank</h3>
 
   <p align="center">
-    The open source Albion Online/OCULAR banking system.
-    <br />
-    <a href="https://octobank.ocular-gaming.net"><strong>Learn more »</strong></a>
-    <br />
-    <br />
+    The source available Albion Online/OCULAR banking system. 
     <a href="https://github.com/OcularGG/OctoBank/discussions">Discussions</a>
-    ·
-    <a href="https://octobank.ocular-gaming.net">Website</a>
-    ·
     <a href="https://github.com/OcularGG/OctoBank/issues">Issues</a>
-    ·
-    <a href="https://octobank.ocular-gaming.net/roadmap">Roadmap</a>
-  </p>
+</p>
 </p>
 <h3 align="center">What powers OctoBank?</h3>
 <p align="center">
