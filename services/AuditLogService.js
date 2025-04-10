@@ -22,12 +22,14 @@ class AuditLogService {
         }
     }
 
-    static async updateAuditLogReason(auditLogId, newReason) {
-        const query = 'UPDATE auditlog SET reason = ? WHERE id = ?';
+    static async updateAuditLogReason(callbackId, newReason) {
+        const query = 'UPDATE auditlog SET reason = ? WHERE callback = ?';
         try {
-            await db.query(query, [newReason, auditLogId]);
+            const [result] = await db.query(query, [newReason, callbackId]);
+            return result; // Return the result of the query
         } catch (error) {
             console.error('Error updating audit log reason:', error);
+            throw error; // Re-throw the error for proper handling
         }
     }
 

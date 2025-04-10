@@ -24,7 +24,7 @@ module.exports = {
 
             const embedContent = [];
             for (const row of rows) {
-                const { sender, target, amount, reason, id } = row;
+                const { sender, target, amount, reason, callbackId } = row;
                 if (reason && reason.toLowerCase() === 'reverted') {
                     return interaction.followUp({
                         content: `The action with callback ID: ${callbackId} has already been reverted.`,
@@ -34,8 +34,17 @@ module.exports = {
 
                 await handleRevert(target, -amount, callbackId, interaction);
 
-                await AuditLogService.updateAuditLogReason(id, 'reverted');
-
+                try {
+                    const updateResult = await AuditLogService.updateAuditLogReason(callbackId, 'reverted');
+                    if (updateResult.affectedRows > 0) {
+                        console.log(`Audit log updated successfully for callback ID: ${callbackId}. Rows affected: ${updateResult.affectedRows}`);
+                    } else {
+                        console.warn(`No rows were updated for callback ID: ${callbackId}.`);
+                    }
+                } catch (error) {
+                    console.error(`Failed to update audit log for callback ID: ${callbackId}. Error:`, error);
+                }
+                
                 await logReversionAction(interaction.user.username, target, amount, callbackId);
 
                 const targetUser = await User.fetchUser(target);
