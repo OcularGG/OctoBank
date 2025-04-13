@@ -150,7 +150,7 @@ module.exports = {
                 .setColor('#ffbf00')
                 .setDescription(`**${targetUsername}** just spent <:OctoGold:1324817815470870609> **${formattedAmount}** OctoGold in the guild market!\n\nTheir new total is <:OctoGold:1324817815470870609> **${formattedNewBalance}** OctoGold!`)
                 .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
-                .setFooter({ text: `ID: ${callbackId} | Transaction completed by ${sender.username} `, iconURL: interaction.user.displayAvatarURL() });
+                .setFooter({ text: `ID: ${auditLogDTO.callbackId} | Transaction completed by ${sender.username} `, iconURL: interaction.user.displayAvatarURL() });
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {

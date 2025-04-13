@@ -72,7 +72,7 @@ function generateEmbedContent(userUpdates, bankUpdate, amount, repairCost, userS
     const lootsplitDecemil = (userShare / amount) * 100;
     const lootsplitPercentage = lootsplitDecemil.toFixed(2) + "%";
     let userDetails = userUpdates.map((user) =>
-        `**${user.username}** received <:OctoGold:1324817815470870609> **${user.coins.toLocaleString()}** OctoGold, and now has <:OctoGold:1324817815470870609> **${user.coins.toLocaleString()}** OctoGold`
+        `**${user.username}** received <:OctoGold:1324817815470870609> **${individualShare.toLocaleString()}** OctoGold, and now has <:OctoGold:1324817815470870609> **${user.coins.toLocaleString()}** OctoGold`
     ).join('\n');
 
     return `

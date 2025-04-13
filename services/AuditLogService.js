@@ -26,10 +26,10 @@ class AuditLogService {
         const query = 'UPDATE auditlog SET reason = ? WHERE callback = ?';
         try {
             const [result] = await db.query(query, [newReason, callbackId]);
-            return result; // Return the result of the query
+            return result; 
         } catch (error) {
             console.error('Error updating audit log reason:', error);
-            throw error; // Re-throw the error for proper handling
+            throw error; 
         }
     }
 
